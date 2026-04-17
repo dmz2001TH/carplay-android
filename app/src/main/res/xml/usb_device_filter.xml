@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <usb-device vendor-id="1452" product-id="4101" /> <!-- Apple MFi -->
+    <usb-device vendor-id="1452" product-id="4102" /> <!-- Apple CarPlay -->
+    <usb-device vendor-id="1452" product-id="4776" /> <!-- Apple iAP -->
+    <!-- Nissan Head Unit - add your specific VID/PID -->
+    <usb-device vendor-id="5561" product-id="48" />   <!-- Nissan common -->
+    <usb-device vendor-id="0" product-id="0" />       <!-- Any USB device for debug -->
+</resources>

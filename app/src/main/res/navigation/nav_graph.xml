@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/dashboardFragment">
+
+    <fragment
+        android:id="@+id/dashboardFragment"
+        android:name="com.carplay.android.ui.dashboard.DashboardFragment"
+        android:label="Dashboard"
+        tools:layout="@layout/fragment_dashboard" />
+
+    <fragment
+        android:id="@+id/mapsFragment"
+        android:name="com.carplay.android.ui.navigation.MapsFragment"
+        android:label="Maps"
+        tools:layout="@layout/fragment_maps" />
+
+    <fragment
+        android:id="@+id/musicFragment"
+        android:name="com.carplay.android.ui.music.MusicFragment"
+        android:label="Music"
+        tools:layout="@layout/fragment_music" />
+
+    <fragment
+        android:id="@+id/phoneFragment"
+        android:name="com.carplay.android.ui.phone.PhoneFragment"
+        android:label="Phone"
+        tools:layout="@layout/fragment_phone" />
+
+</navigation>

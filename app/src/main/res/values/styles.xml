@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="dark_background">#FF1C1C1E</color>
+    <color name="status_bar_bg">#FF2C2C2E</color>
+    <color name="bottom_nav_bg">#FF2C2C2E</color>
+    <color name="carplay_blue">#007AFF</color>
+    <color name="carplay_green">#34C759</color>
+    <color name="carplay_red">#FF3B30</color>
+    <color name="carplay_orange">#FF9500</color>
+    <color name="carplay_gray">#8E8E93</color>
+    <color name="card_bg">#FF3A3A3C</color>
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FFEBEBF5</color>
+
+    <style name="Theme.CarPlay" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="colorPrimary">@color/carplay_blue</item>
+        <item name="colorPrimaryDark">@color/dark_background</item>
+        <item name="colorAccent">@color/carplay_blue</item>
+        <item name="android:windowBackground">@color/dark_background</item>
+        <item name="android:statusBarColor">@color/dark_background</item>
+        <item name="android:navigationBarColor">@color/bottom_nav_bg</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+</resources>

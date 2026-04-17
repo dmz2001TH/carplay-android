@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/navigation_dashboard"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:title="Dashboard" />
+
+    <item
+        android:id="@+id/navigation_maps"
+        android:icon="@android:drawable/ic_dialog_map"
+        android:title="Maps" />
+
+    <item
+        android:id="@+id/navigation_music"
+        android:icon="@android:drawable/ic_media_play"
+        android:title="Music" />
+
+    <item
+        android:id="@+id/navigation_phone"
+        android:icon="@android:drawable/ic_menu_call"
+        android:title="Phone" />
+
+</menu>

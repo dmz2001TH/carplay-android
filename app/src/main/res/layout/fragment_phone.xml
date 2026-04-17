@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CarPlay Phone Layout -->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dark_background">
+
+    <!-- Tab Bar -->
+    <LinearLayout
+        android:id="@+id/tabBar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/status_bar_bg"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/tabKeypad"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Keypad"
+            android:textColor="@color/carplay_blue"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tabRecents"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Recents"
+            android:textColor="@color/carplay_gray"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tabContacts"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Contacts"
+            android:textColor="@color/carplay_gray"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- Phone Number Display -->
+    <TextView
+        android:id="@+id/txtPhoneNumber"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:hint="Enter number"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/carplay_gray"
+        android:textSize="32sp"
+        android:fontFamily="sans-serif-light"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tabBar" />
+
+    <!-- Dialpad -->
+    <GridLayout
+        android:id="@+id/dialpadLayout"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginHorizontal="48dp"
+        android:layout_marginTop="16dp"
+        android:columnCount="3"
+        android:rowCount="4"
+        app:layout_constraintBottom_toTopOf="@id/callButtonLayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/txtPhoneNumber">
+
+        <!-- Row 1: 1, 2, 3 -->
+        <TextView
+            android:id="@+id/btn1"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="1"
+            android:textColor="@color/text_primary"
+            android:textSize="28sp" />
+
+        <TextView
+            android:id="@+id/btn2"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="2\nABC"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/btn3"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="3\nDEF"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp" />
+
+        <!-- Row 2: 4, 5, 6 -->
+        <TextView
+            android:id="@+id/btn4"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="4\nGHI"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/btn5"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="5\nJKL"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/btn6"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="6\nMNO"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp" />
+
+        <!-- Row 3: 7, 8, 9 -->
+        <TextView
+            android:id="@+id/btn7"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="7\nPQRS"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/btn8"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="8\nTUV"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/btn9"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="9\nWXYZ"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp" />
+
+        <!-- Row 4: *, 0, # -->
+        <TextView
+            android:id="@+id/btnStar"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="*"
+            android:textColor="@color/text_primary"
+            android:textSize="28sp" />
+
+        <TextView
+            android:id="@+id/btn0"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="0\n+"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/btnHash"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@color/card_bg"
+            android:gravity="center"
+            android:text="#"
+            android:textColor="@color/text_primary"
+            android:textSize="28sp" />
+    </GridLayout>
+
+    <!-- Call & Backspace -->
+    <LinearLayout
+        android:id="@+id/callButtonLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="48dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnBackspace"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@color/card_bg"
+            android:padding="12dp"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:tint="@color/carplay_gray" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btnCall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="32dp"
+            android:src="@android:drawable/ic_menu_call"
+            app:backgroundTint="@color/carplay_green"
+            app:tint="@color/text_primary" />
+    </LinearLayout>
+
+    <!-- Recents List (hidden by default) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recentsLayout"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tabBar" />
+
+    <!-- Contacts List (hidden by default) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/contactsLayout"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tabBar" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

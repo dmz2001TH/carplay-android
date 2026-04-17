@@ -1,0 +1,20 @@
+# Built outputs
+build/
+.gradle/
+local.properties
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iwr
+.DS_Store
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Logs
+*.log
