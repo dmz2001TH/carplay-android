@@ -123,13 +123,13 @@ class CarPlayService : Service() {
         Timber.d("CarPlay service created")
 
         createNotificationChannel()
-        // Start foreground with appropriate service type for Android 14+
+        // Start foreground with connectedDevice type only
+        // (mediaProjection type will be added when screen capture is actually granted)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
                 createNotification("Initializing..."),
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
             )
         } else {
             startForeground(NOTIFICATION_ID, createNotification("Initializing..."))
@@ -217,12 +217,29 @@ class CarPlayService : Service() {
 
     /**
      * Set MediaProjection (from Activity permission result)
-     * Call this from MainActivity after getting user permission
+     * Call this from MainActivity after getting user permission.
+     * Also updates foreground service type to include mediaProjection.
      */
     fun setMediaProjection(projection: MediaProjection) {
         Timber.d("MediaProjection set")
         this.mediaProjection = projection
         screenCapture.setMediaProjection(projection)
+
+        // Update foreground service type to include mediaProjection (Android 10+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                val notification = createNotification("Screen capture ready")
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                )
+                Timber.d("Foreground service type updated with mediaProjection")
+            } catch (e: Exception) {
+                Timber.w(e, "Could not update foreground service type")
+            }
+        }
     }
 
     /**

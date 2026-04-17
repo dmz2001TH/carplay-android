@@ -57,7 +57,6 @@
             android:name=".ui.MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:screenOrientation="landscape"
             android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -73,11 +72,11 @@
                 android:resource="@xml/usb_device_filter" />
         </activity>
 
-        <!-- CarPlay Service — USB + media projection -->
+        <!-- CarPlay Service — USB only at start; mediaProjection added when screen capture is granted -->
         <service
             android:name=".service.CarPlayService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice|mediaProjection" />
+            android:foregroundServiceType="connectedDevice" />
 
         <!-- NOTE: ScreenCaptureService is NOT an Android Service — it's a helper class
              used internally by CarPlayService. Do NOT declare it as a <service> element. -->
