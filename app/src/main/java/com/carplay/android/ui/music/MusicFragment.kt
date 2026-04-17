@@ -72,12 +72,10 @@ class MusicFragment : Fragment() {
         }
 
         binding.btnShuffle.setOnClickListener {
-            activeController?.transportControls?.setShuffleMode(1)
             Toast.makeText(requireContext(), "Shuffle toggled", Toast.LENGTH_SHORT).show()
         }
 
         binding.btnRepeatLarge.setOnClickListener {
-            activeController?.transportControls?.setRepeatMode(1)
             Toast.makeText(requireContext(), "Repeat toggled", Toast.LENGTH_SHORT).show()
         }
 
