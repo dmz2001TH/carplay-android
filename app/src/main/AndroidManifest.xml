@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- USB Host -->
-    <uses-feature android:name="android.hardware.usb.host" android:required="true" />
+    <!-- USB Host — not required (app can work without it, falls back to accessory mode) -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <!-- Bluetooth -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -40,6 +40,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
+        android:name=".CarPlayApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -69,17 +70,14 @@
                 android:resource="@xml/usb_device_filter" />
         </activity>
 
-        <!-- CarPlay Service -->
+        <!-- CarPlay Service — USB + media projection -->
         <service
             android:name=".service.CarPlayService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="connectedDevice|mediaProjection" />
 
-        <!-- Media Projection Service -->
-        <service
-            android:name=".media.ScreenCaptureService"
-            android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
+        <!-- NOTE: ScreenCaptureService is NOT an Android Service — it's a helper class
+             used internally by CarPlayService. Do NOT declare it as a <service> element. -->
 
         <!-- USB Receiver -->
         <receiver
