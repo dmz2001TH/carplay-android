@@ -15,10 +15,13 @@ class IAP2Packet {
 
         /**
          * Build an iAP2 packet
+         * Format: [StartByte 0x55] [Length 2B] [Type] [Control] [Payload...] [Checksum]
          */
         fun build(type: Byte, control: Byte, payload: ByteArray = byteArrayOf()): ByteArray {
+            // Length field = header + payload (does NOT include checksum byte)
             val length = IAP2Constants.PACKET_HEADER_SIZE + payload.size
-            val packet = ByteArray(length)
+            // Total packet = header + payload + checksum byte
+            val packet = ByteArray(length + 1)
 
             packet[0] = IAP2Constants.START_BYTE
             packet[1] = ((length shr 8) and 0xFF).toByte()
@@ -30,23 +33,13 @@ class IAP2Packet {
                 System.arraycopy(payload, 0, packet, 5, payload.size)
             }
 
-            // Calculate checksum
-            val checksum = calculateChecksum(packet, packet.size - 1)
-            packet[packet.size - 1] = if (packet.size > payload.size + 5) {
-                packet[packet.size - 1]  // already has checksum slot
-            } else {
-                checksum
-            }
-
-            // Recalculate with proper size including checksum
-            val finalPacket = ByteArray(length + 1)
-            System.arraycopy(packet, 0, finalPacket, 0, length)
-            finalPacket[length] = calculateChecksum(finalPacket, length)
+            // Calculate and append checksum
+            packet[length] = calculateChecksum(packet, length)
 
             Timber.d("Built packet: type=0x${type.toUByte().toString(16)}, " +
                     "ctrl=0x${control.toUByte().toString(16)}, " +
-                    "payload=${payload.size}B, total=${finalPacket.size}B")
-            return finalPacket
+                    "payload=${payload.size}B, total=${packet.size}B")
+            return packet
         }
 
         /**

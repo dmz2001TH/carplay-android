@@ -5,6 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
+import com.carplay.android.R
 import com.carplay.android.databinding.FragmentDashboardBinding
 
 /**
@@ -35,21 +37,21 @@ class DashboardFragment : Fragment() {
     }
 
     private fun setupCarPlayGrid() {
-        // App grid click handlers
+        // App grid click handlers — navigate to corresponding fragments
         binding.cardMaps.setOnClickListener {
-            // Navigate to Maps
+            findNavController().navigate(R.id.mapsFragment)
         }
         binding.cardMusic.setOnClickListener {
-            // Navigate to Music
+            findNavController().navigate(R.id.musicFragment)
         }
         binding.cardPhone.setOnClickListener {
-            // Navigate to Phone
+            findNavController().navigate(R.id.phoneFragment)
         }
         binding.cardMessages.setOnClickListener {
-            // Navigate to Messages
+            // Messages not implemented yet
         }
         binding.cardSettings.setOnClickListener {
-            // Open settings
+            // Settings not implemented yet
         }
     }
 

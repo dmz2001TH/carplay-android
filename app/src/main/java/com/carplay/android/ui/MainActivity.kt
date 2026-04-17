@@ -109,9 +109,7 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
 
-        binding.bottomNav.setupWithNavController(navController)
-
-        // CarPlay-style bottom nav behavior
+        // Use manual listener only (setupWithNavController conflicts with custom listener)
         binding.bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.navigation_dashboard -> {
