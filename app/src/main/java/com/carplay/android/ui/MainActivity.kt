@@ -1,16 +1,21 @@
 package com.carplay.android.ui
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.view.View
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
@@ -30,6 +35,7 @@ import timber.log.Timber
  * - Music Player
  * - Phone/Calls
  *
+ * Handles all runtime permission requests on startup.
  * Landscape-only layout optimized for car use.
  */
 class MainActivity : AppCompatActivity() {
@@ -58,6 +64,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ── Runtime Permission Launcher ────────────────────────
+
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions.filter { it.value }.keys
+        val denied = permissions.filter { !it.value }.keys
+
+        Timber.d("Permissions granted: $granted")
+        if (denied.isNotEmpty()) {
+            Timber.w("Permissions denied: $denied")
+            Toast.makeText(this,
+                "Some features may not work without permissions",
+                Toast.LENGTH_LONG).show()
+        }
+
+        // Proceed to start service after permission result
+        startCarPlayService()
+    }
+
     // ── Media Projection Launcher ──────────────────────────
 
     private val screenCaptureLauncher = registerForActivityResult(
@@ -66,19 +92,14 @@ class MainActivity : AppCompatActivity() {
         if (result.resultCode == RESULT_OK && result.data != null) {
             Timber.d("Screen capture permission granted")
 
-            // Get MediaProjection from the permission result
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE)
                 as MediaProjectionManager
             val projection = projectionManager.getMediaProjection(
                 result.resultCode, result.data!!
             )
 
-            // Pass to CarPlayService
             carPlayService?.setMediaProjection(projection)
-
-            // Start media capture
             carPlayService?.startMedia()
-
             Timber.d("Screen capture started")
         } else {
             Timber.w("Screen capture permission denied")
@@ -108,8 +129,8 @@ class MainActivity : AppCompatActivity() {
         setupNavigation()
         setupConnectionUI()
 
-        // Start CarPlay service
-        startCarPlayService()
+        // Request permissions first, then start service
+        requestRequiredPermissions()
     }
 
     override fun onDestroy() {
@@ -117,6 +138,61 @@ class MainActivity : AppCompatActivity() {
         if (serviceBound) {
             unbindService(serviceConnection)
             serviceBound = false
+        }
+    }
+
+    // ── Permissions ────────────────────────────────────────
+
+    /**
+     * Build list of permissions needed at runtime
+     */
+    private fun getRequiredPermissions(): Array<String> {
+        val perms = mutableListOf(
+            // Core functionality
+            Manifest.permission.RECORD_AUDIO,        // Audio capture for CarPlay
+            Manifest.permission.ACCESS_FINE_LOCATION, // Maps
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        )
+
+        // Android 12+ (API 31) — Bluetooth runtime permissions
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            perms.add(Manifest.permission.BLUETOOTH_CONNECT)
+            perms.add(Manifest.permission.BLUETOOTH_SCAN)
+        }
+
+        // Android 13+ (API 33) — Notification permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            perms.add(Manifest.permission.POST_NOTIFICATIONS)
+            perms.add(Manifest.permission.READ_MEDIA_AUDIO)
+        }
+
+        // Android 14+ (API 34) — Foreground service permissions are manifest-only
+        // but we need to ensure the types are declared (already done in manifest)
+
+        return perms.toTypedArray()
+    }
+
+    /**
+     * Check which permissions still need to be requested
+     */
+    private fun getMissingPermissions(): Array<String> {
+        return getRequiredPermissions().filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
+    }
+
+    /**
+     * Request all required runtime permissions
+     */
+    private fun requestRequiredPermissions() {
+        val missing = getMissingPermissions()
+
+        if (missing.isEmpty()) {
+            Timber.d("All permissions already granted")
+            startCarPlayService()
+        } else {
+            Timber.d("Requesting permissions: ${missing.toList()}")
+            permissionLauncher.launch(missing)
         }
     }
 
@@ -151,17 +227,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupConnectionUI() {
-        // Connect button
         binding.btnConnect.setOnClickListener {
             carPlayService?.connect()
         }
 
-        // Disconnect button
         binding.btnDisconnect.setOnClickListener {
             carPlayService?.disconnect()
         }
 
-        // Screen capture button — requests MediaProjection permission
         binding.btnScreenCapture.setOnClickListener {
             requestScreenCapture()
         }
@@ -180,6 +253,14 @@ class MainActivity : AppCompatActivity() {
      * Request screen capture permission via MediaProjection API
      */
     private fun requestScreenCapture() {
+        // Check RECORD_AUDIO permission first (needed for audio encoder)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Microphone permission needed for audio", Toast.LENGTH_SHORT).show()
+            permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
+            return
+        }
+
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE)
             as MediaProjectionManager
         val intent = projectionManager.createScreenCaptureIntent()
@@ -190,7 +271,6 @@ class MainActivity : AppCompatActivity() {
      * Observe CarPlay service state changes
      */
     private fun observeServiceState() {
-        // Observe connection state
         lifecycleScope.launch {
             carPlayService?.connectionState?.collectLatest { state ->
                 runOnUiThread {
@@ -214,7 +294,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     )
 
-                    // Show/hide buttons based on state
                     binding.btnConnect.visibility = when (state) {
                         CarPlayService.ConnectionState.DISCONNECTED,
                         CarPlayService.ConnectionState.ERROR -> View.VISIBLE
@@ -231,7 +310,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Observe active features
         lifecycleScope.launch {
             carPlayService?.activeFeatures?.collectLatest { features ->
                 runOnUiThread {
