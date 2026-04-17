@@ -9,13 +9,22 @@ import javax.crypto.spec.SecretKeySpec
  * MFi (Made for iPhone) Authentication Handler
  *
  * Simulates Apple MFi authentication chip behavior.
- * Real MFi chips use a secure element with RSA-1024 + AES-128.
  *
- * This implementation uses protocol-level emulation to bypass
- * hardware authentication requirements on compatible head units.
+ * ⚠️ IMPORTANT LIMITATION:
+ * Real Apple MFi authentication uses a hardware secure element (auth chip)
+ * with RSA-1024 certificates signed by Apple's MFi CA. This software
+ * implementation CANNOT replicate that — it will be REJECTED by real
+ * CarPlay head units that properly validate MFi certificates.
  *
- * WARNING: This is a reverse-engineered implementation for
- * educational/personal use. Commercial use requires MFi license.
+ * This handler provides:
+ * - Protocol-level handshake simulation (for development/testing)
+ * - Session key derivation (for encrypted communication)
+ * - Certificate structure matching (format only, not cryptographically valid)
+ *
+ * For production use, you need:
+ * 1. Apple MFi License ($$$ and approval process)
+ * 2. MFi authentication IC (e.g., NXP SE050, Apple MFi auth chip)
+ * 3. Apple-issued certificates
  */
 class MFiAuthHandler {
 
@@ -25,7 +34,7 @@ class MFiAuthHandler {
         private const val CHALLENGE_SIZE = 32
     }
 
-    // Simulated MFi certificate data (would be real cert in production)
+    // Simulated MFi certificate (format-correct but not Apple-signed)
     private val simulatedCertificate = generateSimulatedCertificate()
 
     // Session key derived during auth
@@ -44,16 +53,12 @@ class MFiAuthHandler {
             return byteArrayOf()
         }
 
-        // Step 1: Validate challenge format
         if (!validateChallenge(challenge)) {
             Timber.w("Invalid challenge format")
             return byteArrayOf()
         }
 
-        // Step 2: Generate response using simulated auth
         val response = generateAuthResponse(challenge)
-
-        // Step 3: Derive session key
         sessionKey = deriveSessionKey(challenge, response)
 
         Timber.d("Auth response generated: ${response.size}B")
@@ -65,7 +70,7 @@ class MFiAuthHandler {
      * @return Certificate data
      */
     fun handleCertificateRequest(): ByteArray {
-        Timber.d("Sending simulated MFi certificate")
+        Timber.d("Sending simulated MFi certificate (${simulatedCertificate.size}B)")
         return simulatedCertificate
     }
 
@@ -98,13 +103,13 @@ class MFiAuthHandler {
     fun encrypt(data: ByteArray): ByteArray {
         val key = sessionKey ?: return data
         return try {
-            val cipher = Cipher.getInstance("AES/ECB/NoPadding")
+            val cipher = Cipher.getInstance("AES/ECB/PKCS5Padding")
             val keySpec = SecretKeySpec(key, "AES")
             cipher.init(Cipher.ENCRYPT_MODE, keySpec)
-            cipher.doFinal(padData(data))
+            cipher.doFinal(data)
         } catch (e: Exception) {
             Timber.e(e, "Encryption failed")
-            data // Fallback: send unencrypted
+            data
         }
     }
 
@@ -114,7 +119,7 @@ class MFiAuthHandler {
     fun decrypt(data: ByteArray): ByteArray {
         val key = sessionKey ?: return data
         return try {
-            val cipher = Cipher.getInstance("AES/ECB/NoPadding")
+            val cipher = Cipher.getInstance("AES/ECB/PKCS5Padding")
             val keySpec = SecretKeySpec(key, "AES")
             cipher.init(Cipher.DECRYPT_MODE, keySpec)
             cipher.doFinal(data)
@@ -133,26 +138,17 @@ class MFiAuthHandler {
         Timber.d("Auth state reset")
     }
 
-    // ── Private Methods ──────────────────────────────────────
+    // ── Private Methods ────────────────────────────────────
 
-    /**
-     * Validate challenge format
-     */
     private fun validateChallenge(challenge: ByteArray): Boolean {
-        // Check for known challenge patterns
-        // Real MFi challenge has specific structure
         return challenge.size >= CHALLENGE_SIZE
     }
 
     /**
      * Generate authentication response
      *
-     * Real implementation would use:
-     * - RSA-1024 signature with MFi private key
-     * - AES-128 CBC with challenge as IV
-     * - HMAC-SHA256 for integrity
-     *
-     * This emulates the output format
+     * Structure: [Version 1B][Sequence 1B][SHA256 hash 32B][Padding to 64B]
+     * Then XOR-transformed to simulate RSA signature format
      */
     private fun generateAuthResponse(challenge: ByteArray): ByteArray {
         val response = ByteArray(IAP2Constants.MFI_RESPONSE_LEN)
@@ -161,8 +157,7 @@ class MFiAuthHandler {
         val md = MessageDigest.getInstance("SHA-256")
         val hash = md.digest(challenge)
 
-        // Build response structure:
-        // [Version 1B][Sequence 1B][Hash 32B][Padding 30B]
+        // Build response structure
         response[0] = IAP2Constants.MFI_PROTOCOL_VERSION.toByte()
         response[1] = 0x01 // Sequence number
 
@@ -170,7 +165,7 @@ class MFiAuthHandler {
         val copyLen = minOf(hash.size, IAP2Constants.MFI_RESPONSE_LEN - 2)
         System.arraycopy(hash, 0, response, 2, copyLen)
 
-        // XOR transformation with known pattern (emulates RSA signature)
+        // XOR transformation (emulates RSA signature structure)
         for (i in response.indices) {
             val pattern = ((i * 0x5A + 0x37) and 0xFF).toByte()
             response[i] = (response[i].toInt() xor pattern.toInt()).toByte()
@@ -186,43 +181,27 @@ class MFiAuthHandler {
         val md = MessageDigest.getInstance("SHA-256")
         val combined = challenge + response
         val hash = md.digest(combined)
-
-        // Take first 16 bytes as AES-128 key
         return hash.copyOf(AES_KEY_SIZE)
     }
 
     /**
      * Generate simulated MFi certificate
-     * Real cert is X.509 with Apple's MFi CA
+     * Format matches ASN.1 DER structure but is NOT Apple-signed
      */
     private fun generateSimulatedCertificate(): ByteArray {
         val cert = ByteArray(IAP2Constants.MFI_CERTIFICATE_LEN)
 
-        // Certificate header (ASN.1 DER format simulation)
-        cert[0] = 0x30 // SEQUENCE tag
+        // Certificate header (ASN.1 DER SEQUENCE tag)
+        cert[0] = 0x30 // SEQUENCE
         cert[1] = 0x82.toByte() // Long form length
         cert[2] = ((IAP2Constants.MFI_CERTIFICATE_LEN - 4) shr 8).toByte()
         cert[3] = ((IAP2Constants.MFI_CERTIFICATE_LEN - 4) and 0xFF).toByte()
 
-        // Fill with deterministic data (simulates real cert structure)
+        // Fill with deterministic data (simulates cert structure)
         for (i in 4 until cert.size) {
             cert[i] = ((i * 0x17 + 0x5A) and 0xFF).toByte()
         }
 
         return cert
-    }
-
-    /**
-     * PKCS7 padding to AES block size (16 bytes)
-     */
-    private fun padData(data: ByteArray): ByteArray {
-        val blockSize = 16
-        val padding = blockSize - (data.size % blockSize)
-        val padded = ByteArray(data.size + padding)
-        System.arraycopy(data, 0, padded, 0, data.size)
-        for (i in data.size until padded.size) {
-            padded[i] = padding.toByte()
-        }
-        return padded
     }
 }

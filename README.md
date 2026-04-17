@@ -2,6 +2,12 @@
 
 แอพ Android ที่ปลอมตัวเป็น iPhone เพื่อส่งสัญญาณ Apple CarPlay ไปยังจอ NissanConnect ของ Nissan Almera 2025
 
+## ⚠️ สถานะโปรเจค
+
+**Phase 1 เสร็จแล้ว** — Protocol layer, USB transport, video/audio pipeline ทำงานครบวงจร
+
+**ข้อจำกัดสำคัญ:** Apple MFi authentication ต้องใช้ hardware chip จริง (ราคา ~$2-3/ตัว) + Apple MFi License ซอฟต์แวร์อย่างเดียวไม่สามารถ bypass ได้กับ head unit ที่ตรวจ certificate อย่างเข้มงวด
+
 ## 📱 Architecture
 
 ```
@@ -10,7 +16,7 @@
 │                                                  │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
 │  │ Dashboard │  │  Maps    │  │   Music      │  │
-│  │ (Home)    │  │ (Google) │  │ (Spotify)    │  │
+│  │ (Home)    │  │ (OSM)    │  │ (Media3)     │  │
 │  └────┬─────┘  └────┬─────┘  └──────┬───────┘  │
 │       │              │               │           │
 │  ┌────┴──────────────┴───────────────┴────────┐  │
@@ -18,17 +24,18 @@
 │  │  ┌──────────┐ ┌──────────┐ ┌───────────┐  │  │
 │  │  │ Session  │ │  Video   │ │   Audio   │  │  │
 │  │  │ Manager  │ │ Encoder  │ │  Encoder  │  │  │
+│  │  │ (iAP2)   │ │ (H.264)  │ │ (AAC-LC)  │  │  │
 │  │  └────┬─────┘ └────┬─────┘ └─────┬─────┘  │  │
 │  │       │            │             │          │  │
 │  │  ┌────┴────────────┴─────────────┴───────┐  │  │
 │  │  │         iAP2 Protocol Layer           │  │  │
-│  │  │    (MFi Auth + Packet Builder)        │  │  │
+│  │  │  (Link Sync + MFi Auth + Sessions)    │  │  │
 │  │  └─────────────────┬─────────────────────┘  │  │
 │  └────────────────────┼────────────────────────┘  │
 │                       │                           │
 │  ┌────────────────────┴────────────────────────┐  │
 │  │            USB Transport                    │  │
-│  │         (Host Mode + Bulk Transfer)         │  │
+│  │      (Host Bulk Transfer + AOA Mode)        │  │
 │  └────────────────────┬────────────────────────┘  │
 └───────────────────────┼───────────────────────────┘
                         │ USB Cable
@@ -49,31 +56,36 @@
 ```
 app/src/main/java/com/carplay/android/
 ├── protocol/
-│   ├── IAP2Constants.kt      # Protocol constants (packet types, codes)
-│   ├── IAP2Packet.kt         # Packet builder & parser
-│   ├── MFiAuthHandler.kt     # MFi authentication emulation
-│   └── CarPlaySessionManager.kt  # Session lifecycle manager
+│   ├── IAP2Constants.kt          # Protocol constants (link, session, control codes)
+│   ├── IAP2Packet.kt             # Packet builder & parser (link + control layers)
+│   ├── MFiAuthHandler.kt         # MFi authentication emulation
+│   └── CarPlaySessionManager.kt  # Full session state machine
 ├── usb/
-│   ├── UsbTransport.kt       # USB Host communication
-│   └── UsbReceiver.kt        # USB attach/detach broadcast
+│   ├── UsbTransport.kt           # USB Host + Accessory (AOA) transport
+│   └── UsbReceiver.kt            # USB attach/detach broadcast
 ├── media/
-│   ├── VideoEncoder.kt       # H.264 video encoder (screen capture)
-│   ├── AudioEncoder.kt       # AAC audio encoder (microphone)
-│   └── ScreenCaptureService.kt  # Screen capture via MediaProjection
+│   ├── VideoEncoder.kt           # H.264 hardware encoder (MediaCodec)
+│   ├── AudioEncoder.kt           # AAC-LC encoder (MediaCodec + AudioRecord)
+│   └── ScreenCaptureService.kt   # Screen capture via MediaProjection → VideoEncoder
 ├── service/
-│   └── CarPlayService.kt     # Main foreground service
+│   └── CarPlayService.kt         # Main foreground service (wires everything)
 ├── ui/
-│   ├── MainActivity.kt       # Main activity (CarPlay dashboard)
-│   ├── dashboard/
-│   │   └── DashboardFragment.kt  # Home screen with app grid
-│   ├── navigation/
-│   │   └── MapsFragment.kt   # Google Maps integration
-│   ├── music/
-│   │   └── MusicFragment.kt  # Music player UI
-│   └── phone/
-│       └── PhoneFragment.kt  # Phone dialer & contacts
+│   ├── MainActivity.kt           # Main activity (dashboard + controls)
+│   ├── dashboard/                # Home screen
+│   ├── navigation/               # Maps (OpenStreetMap)
+│   ├── music/                    # Music player
+│   └── phone/                    # Phone dialer
 └── utils/
 ```
+
+## 🔧 What Was Fixed (Phase 1)
+
+- **iAP2 Protocol** — Rewrote packet format to match real iAP2 (link sync `[0xFF][0x5A]`, control packets with proper checksum)
+- **USB Transport** — Added Android Open Accessory (AOA) mode alongside USB Host bulk transfer
+- **Video Pipeline** — Connected MediaProjection → ImageReader → NV21 → H.264 MediaCodec → USB (was completely disconnected)
+- **Audio Pipeline** — Connected AudioRecord → PCM → AAC-LC MediaCodec → USB (was missing capture source)
+- **Session Manager** — Proper state machine: DISCONNECTED → LINK_SYNC → LINK_ESTABLISHED → AUTH → SESSION_NEGOTIATING → ACTIVE
+- **ScreenCapture** — Accepts MediaProjection from Activity, feeds VideoEncoder, proper lifecycle
 
 ## 🛠️ วิธี Build
 
@@ -87,6 +99,7 @@ app/src/main/java/com/carplay/android/
 
 ```bash
 # 1. Clone project
+git clone https://github.com/dmz2001TH/carplay-android.git
 cd carplay-android
 
 # 2. เปิดใน Android Studio
@@ -102,58 +115,55 @@ cd carplay-android
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
-### Google Maps API Key
-เพิ่ม Maps API key ใน `AndroidManifest.xml`:
-```xml
-<meta-data
-    android:name="com.google.android.geo.API_KEY"
-    android:value="YOUR_API_KEY_HERE" />
-```
-
 ## 🔌 วิธีใช้
 
 1. **เปิด USB Debugging** บนมือถือ Android
 2. **เสียบ USB** จากมือถือเข้ากับพอร์ต USB ของ Nissan Almera
 3. **เปิดแอพ CarPlay Android**
-4. กด **Connect** — แอพจะจับมือกับ head unit ผ่าน iAP2 protocol
-5. ถ้า **Authentication ผ่าน** → จอรถจะแสดงหน้า Android screen
-6. ใช้ Maps, Music, Phone ได้เลย
+4. กด **Connect** — เริ่ม iAP2 handshake
+5. กด **Screen** — ขอ MediaProjection permission สำหรับ screen capture
+6. ถ้า head unit ตอบรับ → จอรถจะแสดง Android screen
 
 ## ⚙️ Protocol Flow
 
 ```
 Android Phone                     NissanConnect Head Unit
      │                                      │
-     │──── SYN ────────────────────────────→│  1. Link Sync
-     │←─── ACK ─────────────────────────────│
+     │──── SYN [0xFF][0x5A] ──────────────→│  1. Link Sync
+     │←─── SYN-ACK ────────────────────────│
+     │──── ACK ────────────────────────────→│
      │                                      │
      │←─── Auth Challenge ──────────────────│  2. MFi Auth
-     │──── Certificate ────────────────────→│
+     │──── MFi Certificate ────────────────→│
      │──── Auth Response ──────────────────→│
-     │←─── Auth Success ────────────────────│
+     │←─── Auth Success / Failed ───────────│
      │                                      │
-     │──── Start Session (Control) ────────→│  3. Session Setup
-     │──── Start Session (Screen) ─────────→│
-     │──── Start Session (Audio) ──────────→│
-     │──── Start Session (Touch) ──────────→│
+     │──── Start Session (Control 0x00) ──→│  3. Sessions
+     │──── Start Session (Screen  0x20) ──→│
+     │──── Start Session (Audio   0x50) ──→│
+     │──── Start Session (Touch   0x30) ──→│
      │←─── Session ACK ─────────────────────│
      │                                      │
-     │←→ H.264 Video Stream ───────────────→│  4. Active Session
-     │←→ AAC Audio Stream ─────────────────→│
-     │←→ Touch Events ─────────────────────→│
+     │←── H.264 Video Stream (0x20) ──────→│  4. Active
+     │←── AAC Audio Stream  (0x40) ───────→│
+     │──→ Touch Events     (0x30) ────────→│
      │                                      │
 ```
 
 ## ⚠️ ข้อจำกัด
 
-- **MFi Auth**: Apple ใช้ hardware authentication chip จริงๆ แอพนี้ใช้ protocol emulation ซึ่งอาจไม่ผ่าน auth กับ head unit ทุกรุ่น
-- **Video Latency**: Screen capture + H.264 encode + USB transfer มี delay ~100-200ms
-- **Audio Quality**: ขึ้นกับ USB bandwidth และ codec performance
-- **Risk**: การ reverse engineer protocol อาจ void warranty
+| ด้าน | สถานะ | หมายเหตุ |
+|---|---|---|
+| Protocol Layer | ✅ ทำงานได้ | iAP2 packet format + state machine |
+| USB Transport | ✅ ทำงานได้ | Host bulk + AOA accessory mode |
+| Video Pipeline | ✅ ทำงานได้ | MediaProjection → H.264 → USB |
+| Audio Pipeline | ✅ ทำงานได้ | Mic → AAC-LC → USB |
+| MFi Authentication | ⚠️ Emulated | **จะถูก reject โดย head unit จริง** — ต้องใช้ hardware auth chip |
+| ใช้กับรถจริง | ❌ ยังไม่ได้ | ต้อง MFi License + real auth chip |
 
 ## 📋 TODO
 
-- [ ] เพิ่ม MFi real authentication flow
+- [ ] หา MFi authentication chip + license (ถ้าต้องการใช้จริง)
 - [ ] แก้ touch input mapping ให้ตรงกับจอ NissanConnect
 - [ ] เพิ่ม Spotify SDK integration
 - [ ] เพิ่ม Bluetooth fallback (A2DP audio)

@@ -5,7 +5,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjection
+import android.media.projection.MediaProjectionManager
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
@@ -14,6 +17,7 @@ import com.carplay.android.media.ScreenCaptureService
 import com.carplay.android.media.VideoEncoder
 import com.carplay.android.protocol.CarPlaySessionManager
 import com.carplay.android.protocol.IAP2Constants
+import com.carplay.android.protocol.IAP2Packet
 import com.carplay.android.ui.MainActivity
 import com.carplay.android.usb.UsbTransport
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,8 +30,13 @@ import timber.log.Timber
  * Main service that runs the CarPlay connection, manages
  * USB transport, protocol session, and media encoding.
  *
- * Runs as foreground service to maintain persistent connection
- * with the car's head unit.
+ * Lifecycle:
+ * 1. Service starts → initializes USB transport, session manager, encoders
+ * 2. User taps Connect → enumerates USB devices, initiates handshake
+ * 3. Link sync → MFi auth → session negotiation → Active
+ * 4. Screen capture → H.264 encode → USB send to head unit
+ * 5. Audio capture → AAC encode → USB send to head unit
+ * 6. Touch events from head unit → dispatch to Android
  */
 class CarPlayService : Service() {
 
@@ -51,6 +60,9 @@ class CarPlayService : Service() {
     private lateinit var audioEncoder: AudioEncoder
     private lateinit var screenCapture: ScreenCaptureService
 
+    // MediaProjection for screen capture
+    private var mediaProjection: MediaProjection? = null
+
     // ── State ──────────────────────────────────────────────
 
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
@@ -59,6 +71,9 @@ class CarPlayService : Service() {
     private val _activeFeatures = MutableStateFlow(setOf<String>())
     val activeFeatures: StateFlow<Set<String>> = _activeFeatures
 
+    private val _mediaState = MutableStateFlow(MediaState.IDLE)
+    val mediaState: StateFlow<MediaState> = _mediaState
+
     enum class ConnectionState {
         DISCONNECTED,
         CONNECTING,
@@ -66,6 +81,13 @@ class CarPlayService : Service() {
         NEGOTIATING,
         ACTIVE,
         ERROR
+    }
+
+    enum class MediaState {
+        IDLE,
+        CAPTURING,
+        ENCODING,
+        STREAMING
     }
 
     // ── Binder ─────────────────────────────────────────────
@@ -116,14 +138,18 @@ class CarPlayService : Service() {
         _connectionState.value = ConnectionState.CONNECTING
         updateNotification("Connecting...")
 
-        // Enumerate and connect USB devices
+        // Try USB Host mode first
         val devices = usbTransport.enumerateDevices()
         if (devices.isNotEmpty()) {
             usbTransport.connect(devices.first())
         } else {
-            Timber.w("No USB devices found")
-            _connectionState.value = ConnectionState.ERROR
-            updateNotification("No device found")
+            // Fall back to checking for accessories
+            usbTransport.checkForAccessory()
+            if (!usbTransport.isConnected()) {
+                Timber.w("No USB devices or accessories found")
+                _connectionState.value = ConnectionState.ERROR
+                updateNotification("No device found")
+            }
         }
     }
 
@@ -141,12 +167,34 @@ class CarPlayService : Service() {
     }
 
     /**
-     * Start media capture (video + audio)
+     * Start media capture (screen + audio)
+     * Call this AFTER getting MediaProjection permission from user
      */
     fun startMedia() {
         Timber.d("Starting media capture")
-        videoEncoder.start()
+        _mediaState.value = MediaState.CAPTURING
+
+        // Start screen capture (needs MediaProjection to be set via startScreenCapture)
+        if (mediaProjection != null) {
+            screenCapture.startProjection(this, mediaProjection!!)
+        }
+
+        // Start audio encoder
         audioEncoder.start()
+        videoEncoder.start()
+
+        _mediaState.value = MediaState.STREAMING
+        updateNotification("CarPlay Active — Streaming")
+    }
+
+    /**
+     * Set MediaProjection (from Activity permission result)
+     * Call this from MainActivity after getting user permission
+     */
+    fun setMediaProjection(projection: MediaProjection) {
+        Timber.d("MediaProjection set")
+        this.mediaProjection = projection
+        screenCapture.setMediaProjection(projection)
     }
 
     /**
@@ -157,6 +205,7 @@ class CarPlayService : Service() {
         videoEncoder.stop()
         audioEncoder.stop()
         screenCapture.stop()
+        _mediaState.value = MediaState.IDLE
     }
 
     /**
@@ -170,9 +219,7 @@ class CarPlayService : Service() {
             ((y shr 8) and 0xFF).toByte(),
             (y and 0xFF).toByte()
         )
-        val packet = com.carplay.android.protocol.IAP2Packet.build(
-            IAP2Constants.SESSION_TOUCH, 0x00, payload
-        )
+        val packet = IAP2Packet.build(IAP2Constants.SESSION_TOUCH, 0x00, payload)
         usbTransport.send(packet)
     }
 
@@ -225,15 +272,17 @@ class CarPlayService : Service() {
         // Video Encoder
         videoEncoder = VideoEncoder().apply {
             onEncodedFrame = { frameData, isKeyframe ->
-                // Send video frame to head unit
-                val header = byteArrayOf(
-                    if (isKeyframe) IAP2Constants.VIDEO_KEYFRAME_REQUEST
-                    else IAP2Constants.VIDEO_FRAME,
-                    ((frameData.size shr 16) and 0xFF).toByte(),
-                    ((frameData.size shr 8) and 0xFF).toByte(),
-                    (frameData.size and 0xFF).toByte()
+                // Build video packet for head unit
+                val header = ByteArray(4)
+                header[0] = if (isKeyframe) IAP2Constants.VIDEO_KEYFRAME_REQUEST
+                            else IAP2Constants.VIDEO_FRAME
+                header[1] = ((frameData.size shr 16) and 0xFF).toByte()
+                header[2] = ((frameData.size shr 8) and 0xFF).toByte()
+                header[3] = (frameData.size and 0xFF).toByte()
+
+                val packet = IAP2Packet.build(
+                    IAP2Constants.SESSION_SCREEN, 0x00, header + frameData
                 )
-                val packet = IAP2Packet.build(IAP2Constants.SESSION_SCREEN, 0x00, header + frameData)
                 usbTransport.send(packet)
             }
         }
@@ -242,15 +291,17 @@ class CarPlayService : Service() {
         // Audio Encoder
         audioEncoder = AudioEncoder().apply {
             onEncodedAudio = { audioData ->
-                val packet = IAP2Packet.build(IAP2Constants.SESSION_AUDIO_IN, 0x00, audioData)
+                val packet = IAP2Packet.build(
+                    IAP2Constants.SESSION_AUDIO_IN, 0x00, audioData
+                )
                 usbTransport.send(packet)
             }
         }
         audioEncoder.init()
 
-        // Screen Capture
+        // Screen Capture Service
         screenCapture = ScreenCaptureService().apply {
-            videoEncoder = this@CarPlayService.videoEncoder
+            setVideoEncoder(this@CarPlayService.videoEncoder)
         }
     }
 
@@ -299,8 +350,8 @@ class CarPlayService : Service() {
             }
 
             is CarPlaySessionManager.SessionEvent.TouchInput -> {
-                // Touch from head unit - dispatch to Android touch system
-                Timber.d("Touch: ${event.x}, ${event.y} action=${event.action}")
+                Timber.d("Touch from head unit: ${event.x}, ${event.y} action=${event.action}")
+                // Touch events from head unit — dispatch to Android accessibility/input
             }
 
             is CarPlaySessionManager.SessionEvent.Error -> {
@@ -339,7 +390,15 @@ class CarPlayService : Service() {
             else PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        return Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+                .setPriority(Notification.PRIORITY_LOW)
+        }
+
+        return builder
             .setContentTitle("CarPlay Android")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)

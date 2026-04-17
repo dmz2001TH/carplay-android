@@ -1,6 +1,5 @@
 package com.carplay.android.media
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -22,8 +21,14 @@ import com.carplay.android.protocol.IAP2Constants
  * Captures the phone screen using MediaProjection API
  * and feeds frames to the VideoEncoder for H.264 encoding.
  *
- * Used to display the Android screen on the car's head unit
- * via the CarPlay video stream.
+ * Flow:
+ * 1. Activity requests MediaProjection permission from user
+ * 2. Activity gets MediaProjection object
+ * 3. Activity passes MediaProjection to CarPlayService
+ * 4. CarPlayService calls startProjection() here
+ * 5. VirtualDisplay is created, frames flow to ImageReader
+ * 6. ImageReader converts to NV21, queues to VideoEncoder
+ * 7. VideoEncoder outputs H.264 frames → USB → Head Unit
  */
 class ScreenCaptureService {
 
@@ -42,52 +47,74 @@ class ScreenCaptureService {
     private var frameCount = 0L
 
     // Video encoder reference
-    var videoEncoder: VideoEncoder? = null
+    private var videoEncoder: VideoEncoder? = null
 
     // Capture config
     var width = IAP2Constants.VIDEO_WIDTH
     var height = IAP2Constants.VIDEO_HEIGHT
     var dpi = 320
 
-    // Callback for raw frames (Bitmap)
+    // Callback for raw frames (Bitmap) — for UI preview
     var onFrameCaptured: ((Bitmap) -> Unit)? = null
 
     /**
-     * Start media projection (requires user permission)
-     * Call this from Activity with result from MediaProjectionManager
+     * Set the video encoder to feed frames to
      */
-    fun startProjection(context: Context, resultCode: Int, data: Intent) {
-        Timber.d("Starting media projection")
-
-        val projectionManager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE)
-                as MediaProjectionManager
-
-        mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-
-        mediaProjection?.registerCallback(object : MediaProjection.Callback() {
-            override fun onStop() {
-                Timber.d("Media projection stopped")
-                isCapturing = false
-            }
-        }, captureHandler)
-
-        startCapture(context)
+    fun setVideoEncoder(encoder: VideoEncoder) {
+        this.videoEncoder = encoder
     }
 
     /**
-     * Request screen capture permission
+     * Request screen capture permission intent
      * Call this from your Activity
      */
-    fun requestCapturePermission(context: Context): Intent? {
+    fun requestCapturePermission(context: Context): Intent {
         val projectionManager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE)
                 as MediaProjectionManager
         return projectionManager.createScreenCaptureIntent()
     }
 
     /**
-     * Start capturing frames
+     * Start projection with MediaProjection object
+     * Call this from CarPlayService after receiving MediaProjection from Activity
      */
-    private fun startCapture(context: Context) {
+    fun startProjection(context: Context, projection: MediaProjection) {
+        if (isCapturing) {
+            Timber.w("Already capturing, stopping first")
+            stop()
+        }
+
+        Timber.d("Starting media projection")
+        mediaProjection = projection
+
+        // Register callback for projection stop
+        projection.registerCallback(object : MediaProjection.Callback() {
+            override fun onStop() {
+                Timber.d("Media projection stopped by system")
+                isCapturing = false
+            }
+        }, null)
+
+        startCapture(context)
+    }
+
+    /**
+     * Set MediaProjection without starting capture yet
+     */
+    fun setMediaProjection(projection: MediaProjection) {
+        mediaProjection = projection
+    }
+
+    /**
+     * Start capturing frames (requires MediaProjection to be set)
+     */
+    fun startCapture(context: Context) {
+        val projection = mediaProjection
+        if (projection == null) {
+            Timber.e("Cannot start capture: no MediaProjection set")
+            return
+        }
+
         Timber.d("Starting screen capture: ${width}x${height} @ ${dpi}dpi")
 
         // Create capture thread
@@ -111,17 +138,22 @@ class ScreenCaptureService {
                 // Convert Image to Bitmap
                 val bitmap = imageToBitmap(image)
 
-                // Feed to video encoder
+                // Convert to NV21 and feed to video encoder
                 val timestampUs = System.nanoTime() / 1000
                 val yuvData = bitmapToNV21(bitmap)
                 videoEncoder?.queueFrame(yuvData, timestampUs)
 
-                // Callback for UI preview
+                // Callback for UI preview (if anyone is listening)
                 onFrameCaptured?.invoke(bitmap)
 
                 frameCount++
-                if (frameCount % 100 == 0L) {
+                if (frameCount % 300 == 0L) {
                     Timber.d("Captured $frameCount frames")
+                }
+
+                // Recycle bitmap to avoid OOM
+                if (!bitmap.isRecycled) {
+                    bitmap.recycle()
                 }
 
             } catch (e: Exception) {
@@ -132,7 +164,7 @@ class ScreenCaptureService {
         }, captureHandler)
 
         // Create virtual display
-        virtualDisplay = mediaProjection?.createVirtualDisplay(
+        virtualDisplay = projection.createVirtualDisplay(
             VIRTUAL_DISPLAY_NAME,
             width, height, dpi,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
@@ -141,21 +173,44 @@ class ScreenCaptureService {
         )
 
         isCapturing = true
-        Timber.d("Screen capture started")
+        Timber.d("Screen capture started successfully")
     }
 
     /**
      * Stop capturing
      */
     fun stop() {
+        if (!isCapturing && virtualDisplay == null && mediaProjection == null) {
+            return // Already stopped
+        }
+
         Timber.d("Stopping screen capture (captured $frameCount frames)")
         isCapturing = false
 
-        virtualDisplay?.release()
-        imageReader?.close()
-        mediaProjection?.stop()
+        try {
+            virtualDisplay?.release()
+        } catch (e: Exception) {
+            Timber.w(e, "Error releasing virtual display")
+        }
 
-        captureThread?.quitSafely()
+        try {
+            imageReader?.close()
+        } catch (e: Exception) {
+            Timber.w(e, "Error closing image reader")
+        }
+
+        try {
+            mediaProjection?.stop()
+        } catch (e: Exception) {
+            Timber.w(e, "Error stopping media projection")
+        }
+
+        try {
+            captureThread?.quitSafely()
+            captureThread?.join(1000)
+        } catch (e: Exception) {
+            Timber.w(e, "Error stopping capture thread")
+        }
 
         virtualDisplay = null
         imageReader = null
@@ -163,6 +218,8 @@ class ScreenCaptureService {
         captureThread = null
         captureHandler = null
         frameCount = 0
+
+        Timber.d("Screen capture stopped")
     }
 
     /**
@@ -199,6 +256,7 @@ class ScreenCaptureService {
 
     /**
      * Convert Bitmap to NV21 format (YUV420sp) for MediaCodec
+     * NV21 is the preferred format for Android H.264 hardware encoder
      */
     private fun bitmapToNV21(bitmap: Bitmap): ByteArray {
         val w = bitmap.width
@@ -217,16 +275,17 @@ class ScreenCaptureService {
                 val g = (pixel shr 8) and 0xFF
                 val b = pixel and 0xFF
 
-                // RGB to Y
+                // RGB to Y (luminance)
                 val y = ((66 * r + 129 * g + 25 * b + 128) shr 8) + 16
                 yuv[yIndex++] = y.coerceIn(0, 255).toByte()
 
-                // RGB to UV (subsampled 2x2)
+                // RGB to UV (chrominance, subsampled 2x2 → NV21)
                 if (j % 2 == 0 && i % 2 == 0) {
+                    // NV21: V then U
                     val v = ((112 * r - 94 * g - 18 * b + 128) shr 8) + 128
-                    val u2 = ((-38 * r - 74 * g + 112 * b + 128) shr 8) + 128
+                    val u = ((-38 * r - 74 * g + 112 * b + 128) shr 8) + 128
                     yuv[uvIndex++] = v.coerceIn(0, 255).toByte()
-                    yuv[uvIndex++] = u2.coerceIn(0, 255).toByte()
+                    yuv[uvIndex++] = u.coerceIn(0, 255).toByte()
                 }
             }
         }

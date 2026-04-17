@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.os.IBinder
 import android.view.View
@@ -25,7 +26,7 @@ import timber.log.Timber
  *
  * Displays the CarPlay-like interface with:
  * - Dashboard (Home screen)
- * - Navigation (Google Maps)
+ * - Navigation (Maps)
  * - Music Player
  * - Phone/Calls
  *
@@ -64,7 +65,23 @@ class MainActivity : AppCompatActivity() {
     ) { result ->
         if (result.resultCode == RESULT_OK && result.data != null) {
             Timber.d("Screen capture permission granted")
+
+            // Get MediaProjection from the permission result
+            val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE)
+                as MediaProjectionManager
+            val projection = projectionManager.getMediaProjection(
+                result.resultCode, result.data!!
+            )
+
+            // Pass to CarPlayService
+            carPlayService?.setMediaProjection(projection)
+
+            // Start media capture
             carPlayService?.startMedia()
+
+            Timber.d("Screen capture started")
+        } else {
+            Timber.w("Screen capture permission denied")
         }
     }
 
@@ -75,6 +92,7 @@ class MainActivity : AppCompatActivity() {
 
         // Full screen landscape mode
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = (
             View.SYSTEM_UI_FLAG_FULLSCREEN or
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
@@ -109,7 +127,6 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
 
-        // Use manual listener only (setupWithNavController conflicts with custom listener)
         binding.bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.navigation_dashboard -> {
@@ -144,7 +161,7 @@ class MainActivity : AppCompatActivity() {
             carPlayService?.disconnect()
         }
 
-        // Screen capture button
+        // Screen capture button — requests MediaProjection permission
         binding.btnScreenCapture.setOnClickListener {
             requestScreenCapture()
         }
@@ -160,22 +177,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Request screen capture permission
+     * Request screen capture permission via MediaProjection API
      */
     private fun requestScreenCapture() {
-        carPlayService?.let { service ->
-            // Get screen capture intent from service
-            val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE)
-                as android.media.projection.MediaProjectionManager
-            val intent = projectionManager.createScreenCaptureIntent()
-            screenCaptureLauncher.launch(intent)
-        }
+        val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE)
+            as MediaProjectionManager
+        val intent = projectionManager.createScreenCaptureIntent()
+        screenCaptureLauncher.launch(intent)
     }
 
     /**
      * Observe CarPlay service state changes
      */
     private fun observeServiceState() {
+        // Observe connection state
         lifecycleScope.launch {
             carPlayService?.connectionState?.collectLatest { state ->
                 runOnUiThread {
@@ -216,6 +231,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Observe active features
         lifecycleScope.launch {
             carPlayService?.activeFeatures?.collectLatest { features ->
                 runOnUiThread {
