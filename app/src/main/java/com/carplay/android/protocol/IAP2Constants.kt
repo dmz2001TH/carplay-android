@@ -3,46 +3,51 @@ package com.carplay.android.protocol
 /**
  * Apple CarPlay / iAP2 Protocol Constants
  *
- * Based on reverse-engineered Apple iPod Accessory Protocol 2 (iAP2)
- * and CarPlay specification.
- *
- * References:
- * - Apple iAP2 spec (accessory communication)
+ * Based on:
+ * - OkcarOS reverse-engineered implementation (414 stars, working on real cars)
  * - node-carplay, CPDCarPlayIndigo (open source reverse engineering)
- * - libusb CarPlay implementations
+ * - Apple iAP2 spec fragments
+ *
+ * Key facts from OkcarOS research:
+ * - iAP2 packets start with: FF 5A (link) or 40 (control)
+ * - Head unit does NOT verify MFi cert cryptographically on most cars
+ * - Android needs: USB VID=0x05AC, PID=0x12A8 to be seen as iPhone
+ * - CarPlay uses 2 USB interfaces: iAP2 (control) + NCM (video/audio)
+ * - NCM = USB Network Control Model, virtualizes as network interface `usb0`
+ * - Touch goes via HID gadget (/dev/hidg0)
+ * - Audio can go via audio_source gadget or NCM stream
  */
 object IAP2Constants {
 
     // ── iAP2 Packet Structure ──────────────────────────────
-    // iAP2 Link packet: [SyncByte1 0xFF][SyncByte2 0x5A][Length 2B BE][MsgType][Payload][Checksum]
-    // iAP2 Control packet: [PacketStart 0x40][SessionID][PayloadLen 2B BE][Payload...][Checksum]
+    // Link packet:  [0xFF][0x5A][Length 2B BE][0xFF][Payload...][Checksum]
+    // Control packet: [0x40][SessionID][PayloadLen 2B BE][MsgType][Payload...][Checksum]
     const val LINK_SYNC_BYTE_1: Byte = 0xFF.toByte()
-    const val LINK_SYNC_BYTE_2: Byte = 0x5A
+    const val LINK_SYNC_BYTE_2: Byte = 0x5A.toByte()
     const val CONTROL_PACKET_START: Byte = 0x40.toByte()
     const val PACKET_HEADER_SIZE = 5
 
     // ── Link Layer Messages ────────────────────────────────
-    const val LINK_MSG_SYN: Byte = 0xFF.toByte()       // Link synchronization request
-    const val LINK_MSG_SYN_ACK: Byte = 0x06.toByte()   // Link sync acknowledgment
-    const val LINK_MSG_ACK: Byte = 0x06.toByte()       // Acknowledgment
-    const val LINK_MSG_EAK: Byte = 0x05.toByte()       // Extended acknowledge
-    const val LINK_MSG_RST: Byte = 0x52.toByte()       // Reset
+    const val LINK_MSG_SYN: Byte = 0xFF.toByte()
+    const val LINK_MSG_SYN_ACK: Byte = 0x06.toByte()
+    const val LINK_MSG_ACK: Byte = 0x06.toByte()
+    const val LINK_MSG_EAK: Byte = 0x05.toByte()
+    const val LINK_MSG_RST: Byte = 0x52.toByte()
 
     // ── Session Types (iAP2 session IDs) ──────────────────
-    const val SESSION_CONTROL: Byte = 0x00.toByte()    // Control channel
-    const val SESSION_MEDIA: Byte = 0x10.toByte()      // Media metadata
-    const val SESSION_SCREEN: Byte = 0x20.toByte()     // Video stream
-    const val SESSION_TOUCH: Byte = 0x30.toByte()      // Touch input
-    const val SESSION_AUDIO_IN: Byte = 0x40.toByte()   // Microphone input
-    const val SESSION_AUDIO_OUT: Byte = 0x50.toByte()  // Speaker output
-    const val SESSION_PHONE: Byte = 0x60.toByte()      // Telephony
-    const val SESSION_INFO: Byte = 0x70.toByte()       // Device info
+    const val SESSION_CONTROL: Byte = 0x00.toByte()
+    const val SESSION_MEDIA: Byte = 0x10.toByte()
+    const val SESSION_SCREEN: Byte = 0x20.toByte()
+    const val SESSION_TOUCH: Byte = 0x30.toByte()
+    const val SESSION_AUDIO_IN: Byte = 0x40.toByte()
+    const val SESSION_AUDIO_OUT: Byte = 0x50.toByte()
+    const val SESSION_PHONE: Byte = 0x60.toByte()
+    const val SESSION_INFO: Byte = 0x70.toByte()
 
-    // ── iAP2 Link Sync Payload ────────────────────────────
-    // Real iAP2 SYN contains: maxRecvSize, version, etc.
-    const val IAP2_LINK_VERSION: Byte = 0x02            // iAP2 version
-    const val IAP2_MAX_PACKET_SIZE = 4096               // Max packet size
-    const val IAP2_MAX_RECEIVED_SIZE = 65535            // Max receive buffer
+    // ── iAP2 Link Sync ─────────────────────────────────────
+    const val IAP2_LINK_VERSION: Byte = 0x02
+    const val IAP2_MAX_PACKET_SIZE = 4096
+    const val IAP2_MAX_RECEIVED_SIZE = 65535
 
     // ── Control Messages ──────────────────────────────────
     const val CTRL_AUTH_CHALLENGE: Byte = 0xAA.toByte()
@@ -71,11 +76,11 @@ object IAP2Constants {
     const val VIDEO_KEYFRAME_REQUEST: Byte = 0x10.toByte()
     const val VIDEO_FRAME: Byte = 0x20.toByte()
 
-    // Default CarPlay resolution (NissanConnect 8" display)
+    // NissanConnect 8" display defaults
     const val VIDEO_WIDTH = 800
     const val VIDEO_HEIGHT = 480
     const val VIDEO_FPS = 30
-    const val VIDEO_BITRATE = 2_000_000  // 2 Mbps
+    const val VIDEO_BITRATE = 2_000_000
 
     // ── Audio Stream ──────────────────────────────────────
     const val AUDIO_CODEC_AAC_LC: Byte = 0x01.toByte()
@@ -91,31 +96,31 @@ object IAP2Constants {
 
     // ── Device Info (emulates iPhone) ─────────────────────
     const val DEVICE_NAME = "iPhone"
-    const val DEVICE_MODEL = "iPhone15,2"          // iPhone 14 Pro
+    const val DEVICE_MODEL = "iPhone15,2"
     const val DEVICE_OS_VERSION = "17.4.1"
     const val DEVICE_CARRIER = "AIS"
     const val DEVICE_LANGUAGE = "th-TH"
     const val DEVICE_SCREEN_SCALE = 2
 
-    // ── MFi (Authentication) ──────────────────────────────
+    // ── MFi ───────────────────────────────────────────────
     const val MFI_VERSION: Byte = 0x01.toByte()
     const val MFI_CHALLENGE_LEN = 32
     const val MFI_RESPONSE_LEN = 64
     const val MFI_CERTIFICATE_LEN = 625
+    const val MFI_PROTOCOL_VERSION = 2
 
-    // MFi Protocol Version (we emulate MFi auth chip behavior)
-    const val MFI_PROTOCOL_VERSION = 2              // iAP2
+    // ── Apple USB Identifiers (from OkcarOS) ──────────────
+    // Confirmed working: VID=0x05AC, PID=0x12A8
+    const val APPLE_USB_VID = 0x05AC
+    const val APPLE_USB_PID = 0x12A8
+    const val APPLE_BCD_DEVICE = 0x1003
+    const val APPLE_BCD_USB = 0x0200
 
-    // ── USB Accessory (AOA) Protocol Constants ────────────
-    const val AOA_ACCESSORY_VENDOR_ID = 0x18D1      // Google AOA VID
-    const val AOA_ACCESSORY_PRODUCT_ID_BASE = 0x2D00
-    const val AOA_ACCESSORY_PRODUCT_ID_AUDIO = 0x2D01
-    const val AOA_ACCESSORY_PRODUCT_ID_ADB = 0x2D02
-    // Apple CarPlay uses proprietary USB interface, not AOA
-    // But we support AOA as fallback for Android Auto compatibility
+    // ── USB Gadget Config (OkcarOS reference) ─────────────
+    // ConfigFS base path
+    const val USB_GADGET_PATH = "/config/usb_gadget/g1"
+    const val USB_UDC_PATH = "$USB_GADGET_PATH/UDC"
 
-    // ── Apple USB Interface Identifiers ───────────────────
-    const val APPLE_USB_VID = 0x05AC                 // Apple Vendor ID
-    const val APPLE_CARPLAY_PID_RANGE_START = 0x1290
-    const val APPLE_CARPLAY_PID_RANGE_END = 0x12AF
+    // ── Debug ──────────────────────────────────────────────
+    const val DEBUG_LOG_PATH = "/sdcard/carplay_debug.log"
 }
