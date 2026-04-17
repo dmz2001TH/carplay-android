@@ -43,7 +43,6 @@
             android:layout_marginStart="8dp"
             android:background="@null"
             android:hint="Search destination..."
-            android:hintTextColor="@color/carplay_gray"
             android:imeOptions="actionSearch"
             android:inputType="text"
             android:textColor="@color/text_primary"

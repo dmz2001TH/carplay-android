@@ -17,6 +17,7 @@ import timber.log.Timber
 import java.io.FileDescriptor
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import android.hardware.usb.UsbConstants
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -334,8 +335,8 @@ class UsbTransport(private val context: Context) {
 
                 for (j in 0 until iface.endpointCount) {
                     val endpoint = iface.getEndpoint(j)
-                    if (endpoint.type == UsbInterface.USB_ENDPOINT_XFER_BULK) {
-                        if (endpoint.direction == UsbInterface.USB_DIR_IN) {
+                    if (endpoint.type == UsbConstants.USB_ENDPOINT_XFER_BULK) {
+                        if (endpoint.direction == UsbConstants.USB_DIR_IN) {
                             foundIn = endpoint
                         } else {
                             foundOut = endpoint

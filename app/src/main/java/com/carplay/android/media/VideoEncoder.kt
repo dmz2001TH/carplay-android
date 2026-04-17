@@ -169,10 +169,9 @@ class VideoEncoder {
     fun requestKeyframe() {
         Timber.d("Requesting keyframe")
         try {
-            val format = MediaFormat().apply {
-                setInteger(MediaFormat.KEY_REQUEST_SYNC_FRAME, 0)
-            }
-            encoder?.setParameters(format)
+            val params = android.os.Bundle()
+            params.putInt("request-sync", 0)
+            encoder?.setParameters(params)
         } catch (e: Exception) {
             Timber.e(e, "Error requesting keyframe")
         }
