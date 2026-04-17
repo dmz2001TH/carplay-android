@@ -18,6 +18,8 @@ import com.carplay.android.media.VideoEncoder
 import com.carplay.android.protocol.CarPlaySessionManager
 import com.carplay.android.protocol.IAP2Constants
 import com.carplay.android.protocol.IAP2Packet
+import com.carplay.android.service.ReconnectManager
+import com.carplay.android.service.TouchDispatcher
 import com.carplay.android.ui.MainActivity
 import com.carplay.android.usb.UsbTransport
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +39,11 @@ import timber.log.Timber
  * 4. Screen capture → H.264 encode → USB send to head unit
  * 5. Audio capture → AAC encode → USB send to head unit
  * 6. Touch events from head unit → dispatch to Android
+ *
+ * Features:
+ * - Auto-reconnect with exponential backoff on unexpected disconnect
+ * - Touch input dispatching from head unit to Android
+ * - Heartbeat keepalive to detect stale connections
  */
 class CarPlayService : Service() {
 
@@ -44,6 +51,8 @@ class CarPlayService : Service() {
         private const val TAG = "CarPlayService"
         private const val NOTIFICATION_CHANNEL_ID = "carplay_channel"
         private const val NOTIFICATION_ID = 1001
+        private const val HEARTBEAT_INTERVAL_MS = 5_000L
+        private const val HEARTBEAT_TIMEOUT_MS = 15_000L
 
         // Service actions
         const val ACTION_CONNECT = "com.carplay.CONNECT"
@@ -59,9 +68,16 @@ class CarPlayService : Service() {
     private lateinit var videoEncoder: VideoEncoder
     private lateinit var audioEncoder: AudioEncoder
     private lateinit var screenCapture: ScreenCaptureService
+    private lateinit var reconnectManager: ReconnectManager
+    private lateinit var touchDispatcher: TouchDispatcher
 
     // MediaProjection for screen capture
     private var mediaProjection: MediaProjection? = null
+
+    // Heartbeat / keepalive
+    private var heartbeatHandler: android.os.Handler? = null
+    private var heartbeatRunnable: Runnable? = null
+    private var lastHeartbeatResponse = 0L
 
     // ── State ──────────────────────────────────────────────
 
@@ -158,6 +174,8 @@ class CarPlayService : Service() {
      */
     fun disconnect() {
         Timber.d("Disconnecting CarPlay")
+        reconnectManager.cancel()
+        stopHeartbeat()
         stopMedia()
         sessionManager.closeSession()
         usbTransport.disconnect()
@@ -235,6 +253,58 @@ class CarPlayService : Service() {
      */
     fun getSessionManager() = sessionManager
 
+    /**
+     * Get touch dispatcher (for calibration/configuration)
+     */
+    fun getTouchDispatcher() = touchDispatcher
+
+    /**
+     * Get reconnect manager (for UI control)
+     */
+    fun getReconnectManager() = reconnectManager
+
+    // ── Heartbeat / Keepalive ──────────────────────────────
+
+    /**
+     * Start connection heartbeat to detect stale connections
+     */
+    private fun startHeartbeat() {
+        lastHeartbeatResponse = System.currentTimeMillis()
+        heartbeatRunnable = object : Runnable {
+            override fun run() {
+                if (_connectionState.value == ConnectionState.ACTIVE) {
+                    val elapsed = System.currentTimeMillis() - lastHeartbeatResponse
+                    if (elapsed > HEARTBEAT_TIMEOUT_MS) {
+                        Timber.w("Heartbeat timeout (${elapsed}ms since last response)")
+                        // Connection appears stale — let reconnect manager handle it
+                        disconnect()
+                    } else {
+                        // Send keepalive ping
+                        val ping = IAP2Packet.build(IAP2Constants.SESSION_CONTROL, 0x00, byteArrayOf(0x00))
+                        usbTransport.send(ping)
+                    }
+                }
+                heartbeatHandler?.postDelayed(this, HEARTBEAT_INTERVAL_MS)
+            }
+        }
+        heartbeatHandler?.postDelayed(heartbeatRunnable!!, HEARTBEAT_INTERVAL_MS)
+    }
+
+    /**
+     * Stop heartbeat monitoring
+     */
+    private fun stopHeartbeat() {
+        heartbeatRunnable?.let { heartbeatHandler?.removeCallbacks(it) }
+        heartbeatRunnable = null
+    }
+
+    /**
+     * Call when receiving any data from head unit (resets heartbeat timer)
+     */
+    fun onHeartbeatResponse() {
+        lastHeartbeatResponse = System.currentTimeMillis()
+    }
+
     // ── Initialization ─────────────────────────────────────
 
     private fun initComponents() {
@@ -253,6 +323,7 @@ class CarPlayService : Service() {
             }
 
             onDataReceived = { data ->
+                onHeartbeatResponse()
                 sessionManager.handleData(data)
             }
         }
@@ -303,6 +374,27 @@ class CarPlayService : Service() {
         screenCapture = ScreenCaptureService().apply {
             setVideoEncoder(this@CarPlayService.videoEncoder)
         }
+
+        // Touch Dispatcher
+        touchDispatcher = TouchDispatcher(this)
+
+        // Reconnect Manager
+        reconnectManager = ReconnectManager(
+            onReconnect = {
+                Timber.d("Attempting reconnect...")
+                _connectionState.value = ConnectionState.CONNECTING
+                updateNotification("Reconnecting... (attempt ${reconnectManager.getRetryCount()})")
+                connect()
+            },
+            onReconnectFailed = {
+                Timber.e("All reconnect attempts failed")
+                _connectionState.value = ConnectionState.ERROR
+                updateNotification("Connection failed — tap to retry")
+            }
+        )
+
+        // Heartbeat handler for connection keepalive
+        heartbeatHandler = android.os.Handler(android.os.Looper.getMainLooper())
     }
 
     // ── Event Handling ─────────────────────────────────────
@@ -329,6 +421,12 @@ class CarPlayService : Service() {
                 _connectionState.value = ConnectionState.ACTIVE
                 updateNotification("CarPlay Active ✓")
 
+                // Reset reconnect counter on successful connection
+                reconnectManager.reset()
+
+                // Start heartbeat monitoring
+                startHeartbeat()
+
                 // Update active features
                 val features = mutableSetOf<String>()
                 event.sessions.forEach { session ->
@@ -347,11 +445,19 @@ class CarPlayService : Service() {
             is CarPlaySessionManager.SessionEvent.Disconnected -> {
                 _connectionState.value = ConnectionState.DISCONNECTED
                 _activeFeatures.value = emptySet()
+                stopHeartbeat()
+
+                // Auto-reconnect on unexpected disconnect
+                if (reconnectManager.getRetryCount() < 10) {
+                    Timber.d("Unexpected disconnect, starting auto-reconnect")
+                    reconnectManager.startReconnect()
+                }
             }
 
             is CarPlaySessionManager.SessionEvent.TouchInput -> {
                 Timber.d("Touch from head unit: ${event.x}, ${event.y} action=${event.action}")
-                // Touch events from head unit — dispatch to Android accessibility/input
+                // Dispatch touch event to Android input system
+                touchDispatcher.dispatchTouch(event.x, event.y, event.action)
             }
 
             is CarPlaySessionManager.SessionEvent.Error -> {

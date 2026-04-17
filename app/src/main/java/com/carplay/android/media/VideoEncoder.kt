@@ -3,6 +3,7 @@ package com.carplay.android.media
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import timber.log.Timber
@@ -44,8 +45,17 @@ class VideoEncoder {
     var bitrate = IAP2Constants.VIDEO_BITRATE   // 2 Mbps
     var frameRate = IAP2Constants.VIDEO_FPS     // 30
 
+    // Latency mode: 0 = lowest latency, 1 = balanced, 2 = best quality
+    var latencyMode = 0
+
     /**
      * Initialize the H.264 encoder
+     *
+     * Configured for minimum latency CarPlay streaming:
+     * - CBR bitrate for consistent bandwidth
+     * - No B-frames (instant decode)
+     * - Real-time priority
+     * - Low-latency hint on Android 11+
      */
     fun init() {
         Timber.d("Initializing H.264 encoder: ${width}x${height} @ ${frameRate}fps, ${bitrate}bps")
@@ -62,34 +72,45 @@ class VideoEncoder {
                 setInteger(MediaFormat.KEY_COLOR_FORMAT,
                     MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar)
 
-                // Try VBR, fall back handled by encoder
+                // CBR for consistent bandwidth (better for USB streaming than VBR)
                 try {
                     setInteger(MediaFormat.KEY_BITRATE_MODE,
-                        MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR)
+                        MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR)
                 } catch (e: Exception) {
-                    Timber.w("VBR not supported, using default bitrate mode")
+                    Timber.w("CBR not supported, using default bitrate mode")
                 }
 
-                // Low latency settings
-                setInteger(MediaFormat.KEY_PRIORITY, 0)  // Real-time priority
+                // Priority: real-time
+                setInteger(MediaFormat.KEY_PRIORITY, 0)
+
+                // No B-frames for lowest latency
                 try {
-                    setInteger("max-bframes", 0)  // No B-frames for low latency
+                    setInteger("max-bframes", 0)
                 } catch (e: Exception) {
                     // Not all encoders support this
                 }
 
-                // Attempt CQ mode for better quality
+                // Low latency mode (Android 11+)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    try {
+                        setInteger(MediaFormat.KEY_LATENCY, latencyMode)
+                    } catch (e: Exception) {
+                        Timber.d("KEY_LATENCY not supported on this device")
+                    }
+                }
+
+                // Encoder quality/speed tradeoff — prefer speed
                 try {
-                    setInteger("qmin", 10)
-                    setInteger("qmax", 50)
+                    setInteger("priority", 0)  // realtime
+                    setInteger("complexity", 0) // lowest complexity = fastest
                 } catch (e: Exception) {
-                    // Optional parameter
+                    // Optional
                 }
             }
 
             encoder?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
-            Timber.d("H.264 encoder initialized successfully")
+            Timber.d("H.264 encoder initialized successfully (low-latency mode)")
         } catch (e: Exception) {
             Timber.e(e, "Failed to initialize encoder with SemiPlanar, trying Flexible")
 
