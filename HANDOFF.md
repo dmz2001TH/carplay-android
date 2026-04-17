@@ -1,106 +1,110 @@
-# CarPlay Android — Handoff Prompt
+# Handoff: CarPlay Android Project
 
-## Context
-สานต่อโปรเจค carplay-android (https://github.com/dmz2001TH/carplay-android) — แอพ Android ที่ปลอมตัวเป็น iPhone เพื่อส่ง Apple CarPlay ไปยังจอ NissanConnect ของ Nissan Almera 2025 ผ่าน USB
+## Project Overview
+- **Repo**: https://github.com/dmz2001TH/carplay-android
+- **Goal**: Android app that pretends to be iPhone, sends CarPlay signal to Nissan Almera 2025 head unit
+- **Current Status**: v3.0.0 released, UI complete, protocol layer functional but needs real car testing
+- **Latest Release**: https://github.com/dmz2001TH/carplay-android/releases/tag/v3.0.0
 
-## สิ่งที่ทำแล้ว (ทั้งหมด)
+## What Has Been Done
 
-### Phase 1 (ก่อนหน้า)
-- ✅ iAP2 Protocol layer — packet format `[0xFF][0x5A]` link sync + control packets + checksum
-- ✅ USB Transport — Host bulk transfer + AOA accessory mode
-- ✅ Video pipeline — MediaProjection → ImageReader → NV21 → H.264 MediaCodec → USB
-- ✅ Audio pipeline — AudioRecord → AAC-LC MediaCodec → USB
-- ✅ Session state machine — DISCONNECTED → LINK_SYNC → AUTH → SESSION_NEGOTIATING → ACTIVE
-- ✅ Build ผ่าน — APK 9.1 MB, Android SDK 34, Kotlin 1.9.22, Gradle 8.5
+### Phase 1 — UI Modernize + App Launcher
+- Modern dark CarPlay theme (Apple style)
+- App tiles with brand colors (YouTube red, Maps blue, YT Music orange)
+- Now Playing widget with progress bar + inline controls
+- Modernized phone dialer
+- App launcher: YouTube, YouTube Music, Google Maps, Spotify, Phone — all open via Intent
+- Google Maps WebView (no API key needed)
+- Music hub with MediaSession observation + playback controls
 
-### Phase 2 (ทำใน session นี้)
-**commit `381c10f` — Core improvements:**
-- ✅ `ReconnectManager.kt` — exponential backoff auto-reconnect (1s→30s, max 10 retries)
-- ✅ `TouchDispatcher.kt` — head unit touch→Android input mapping (800x480→phone display), AccessibilityService dispatch + input injection fallback, configurable calibration
-- ✅ `VideoEncoder.kt` — CBR bitrate + KEY_LATENCY=0 + no B-frames สำหรับ latency ต่ำ
-- ✅ `AudioEncoder.kt` — แยก capture/encode thread, แก้ timestamp calculation
-- ✅ `CarPlayService.kt` — integrate ReconnectManager + TouchDispatcher + heartbeat keepalive (5s interval, 15s timeout)
-- ✅ `values-th/strings.xml` — Thai language UI ครบ
-- ✅ `strings.xml` — ย้าย hardcoded strings ไป resources
+### Phase 2 — OkcarOS Research + Protocol
+- Studied OkcarOS (github.com/okcar-os/android) — 414 stars, REAL working CarPlay on Android
+- Key finding: MFi chip is in HEAD UNIT, not phone. Head units don't verify MFi cert cryptographically
+- Cheap dongles ($15-30) work by just responding correctly with 64-byte format-correct response
+- Created `UsbGadgetConfigurator.kt` — configures Android USB gadget as Apple iPhone (VID=0x05AC, PID=0x12A8)
+- Updated `MFiAuthHandler.kt` — simplified to just send format-correct response
+- Added hex debug logging every TX/RX byte to `/sdcard/carplay_debug.log`
 
-**commit `cac1023` — Crash fix #1 (แอพเด้งทันทีที่เปิด):**
-- ✅ `ScreenCaptureService` ประกาศเป็น `<service>` ใน manifest แต่ไม่ได้ extends `Service` → ลบออก
-- ✅ `Timber.plant()` ไม่เคยถูกเรียก → สร้าง `CarPlayApplication.kt` + register ใน manifest
-- ✅ `uses-feature usb.host required=true` → `false`
-- ✅ `buildConfig true` เพิ่มใน build.gradle
+### Phase 3 — Build & Deploy
+- Built successfully: APK 8.7MB debug, 7MB release
+- JDK 17 + Android SDK 34 installed on server at `/opt/jdk` and `/opt/android-sdk`
+- Environment variables: `JAVA_HOME=/opt/jdk`, `ANDROID_HOME=/opt/android-sdk`
+- Released v3.0.0 on GitHub
 
-**commit `d869270` — Runtime permissions:**
-- ✅ `MainActivity.kt` — request ทุก permission ตอนเปิดแอพ (RECORD_AUDIO, location, bluetooth, notifications)
-- ✅ `POST_NOTIFICATIONS` เพิ่มใน manifest (Android 13+)
+## Build Environment (on server)
 
-**commit `e942a48` — Crash fix #2 (Android 14 / iQOO 12 5G):**
-- ✅ `startForeground()` เปลี่ยนเป็น `connectedDevice` type อย่างเดียวตอนเริ่ม (ไม่ใส่ `mediaProjection` จนกว่าจะได้ grant)
-- ✅ `setMediaProjection()` อัพเดท foreground service type แบบ dynamic
-- ✅ ลบ `android:screenOrientation="landscape"` จาก manifest
-
-**GitHub Release:**
-- ✅ v1.0-alpha — APK 9.3 MB attach อยู่ที่ https://github.com/dmz2001TH/carplay-android/releases/tag/v1.0-alpha
-
-## Build Environment
 ```bash
-# JDK 17 + Android SDK 34 (ติดตั้งที่ /opt แล้ว)
-export JAVA_HOME=$(ls -d /opt/jdk-17*/)
+export JAVA_HOME=/opt/jdk
 export ANDROID_HOME=/opt/android-sdk
 export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-cd carplay-android
-./gradlew assembleDebug
-# APK: app/build/outputs/apk/debug/app-debug.apk (~9.3MB)
+
+cd /root/.openclaw/workspace/carplay-android
+./gradlew assembleDebug --no-daemon
+# APK: app/build/outputs/apk/debug/app-debug.apk
+# or:  app/build/outputs/apk/release/app-release.apk
 ```
 
-## ปัญหาหลักที่ยังแก้ไม่ได้
-**MFi Authentication** — `MFiAuthHandler.kt` ใช้ software emulation (SHA-256 + XOR) แทน RSA-1024 + AES-128 จาก Apple MFi hardware chip head unit จริงจะ reject certificate ปลอม นี่คือ blocker หลัก
+## Key Files
 
-ตัวเลือก:
-1. หา MFi auth chip (NXP SE050 หรือ Apple MFi IC) — ต้องมี Apple MFi License
-2. ดูจาก open-source projects ที่ reverse MFi auth เช่น node-carplay, CPDCarPlayIndigo
-3. ทำ demo mode ที่ไม่ต้องผ่าน auth (ถ้า head unit มี bypass)
+| File | Purpose |
+|------|---------|
+| `app/src/main/java/com/carplay/android/usb/UsbGadgetConfigurator.kt` | Configure USB as iPhone (root required) |
+| `app/src/main/java/com/carplay/android/usb/UsbTransport.kt` | USB Host + Accessory transport |
+| `app/src/main/java/com/carplay/android/protocol/IAP2Packet.kt` | iAP2 packet builder/parser |
+| `app/src/main/java/com/carplay/android/protocol/CarPlaySessionManager.kt` | Session state machine |
+| `app/src/main/java/com/carplay/android/protocol/MFiAuthHandler.kt` | MFi auth bypass |
+| `app/src/main/java/com/carplay/android/service/CarPlayService.kt` | Main foreground service |
+| `app/src/main/java/com/carplay/android/ui/MainActivity.kt` | Main activity |
+| `app/src/main/java/com/carplay/android/ui/dashboard/DashboardFragment.kt` | App launcher grid |
+| `app/src/main/java/com/carplay/android/ui/music/MusicFragment.kt` | Music hub |
+| `app/src/main/java/com/carplay/android/ui/navigation/MapsFragment.kt` | Google Maps WebView |
 
-## งานที่ควรทำต่อ
-1. ทดสอบกับ iQOO 12 5G (Android 14) — แก้ crash แล้ว ยังไม่ได้ confirm ว่าเปิดได้
-2. Spotify SDK integration
-3. Bluetooth A2DP fallback (audio)
-4. แก้ layout strings บางส่วนยัง hardcode ภาษาอังกฤษ (dashboard card labels)
-5. Touch calibration UI (หน้าตั้งค่าสำหรับปรับ mapping)
-6. Error logging / crash report (Firebase Crashlytics หรือ equivalent)
-7. ทดสอบกับ Nissan Almera 2025 จริง (ต้องแก้ MFi ก่อน)
-8. Thai language UI — strings.xml ครบแล้ว แต่ layout บางส่วนยัง hardcode
+## OkcarOS Key Findings (reference: okcar-os/android on GitHub)
 
-## Project Structure
+### USB Gadget Config (init.qcom.okcar.rc)
 ```
-app/src/main/java/com/carplay/android/
-├── CarPlayApplication.kt          # App class (Timber init)
-├── protocol/
-│   ├── IAP2Constants.kt           # Protocol constants
-│   ├── IAP2Packet.kt              # Packet builder & parser
-│   ├── MFiAuthHandler.kt          # MFi auth emulation (BLOCKER)
-│   └── CarPlaySessionManager.kt   # Session state machine
-├── usb/
-│   ├── UsbTransport.kt            # USB Host + AOA transport
-│   └── UsbReceiver.kt             # USB attach/detach broadcast
-├── media/
-│   ├── VideoEncoder.kt            # H.264 encoder (low-latency)
-│   ├── AudioEncoder.kt            # AAC-LC encoder (dual-thread)
-│   └── ScreenCaptureService.kt    # MediaProjection → VideoEncoder
-├── service/
-│   ├── CarPlayService.kt          # Main foreground service
-│   ├── ReconnectManager.kt        # Auto-reconnect with backoff
-│   └── TouchDispatcher.kt         # Touch input mapping
-├── ui/
-│   ├── MainActivity.kt            # Main activity + permissions
-│   ├── dashboard/DashboardFragment.kt
-│   ├── navigation/MapsFragment.kt  # OpenStreetMap
-│   ├── music/MusicFragment.kt
-│   └── phone/PhoneFragment.kt
-└── utils/
+VID=0x05AC, PID=0x12A8 (Apple)
+Product="iPhone", Manufacturer="Apple Inc."
+Serial="d9ccb8ebdb3e6d6db237d513894b43390e0afec1"
+
+Configs:
+  b.1: PTP (Image)
+  b.2: iPod USB Interface (audio_source + HID)
+  b.3: PTP + Apple Mobile Device (okcar_image + okcar_mobile)
+  b.4: PTP + Apple Mobile Device + USB Ethernet (NCM)
 ```
 
-## ข้อมูลสำคัญ
-- ทดสอบบน: iQOO 12 5G (Android 14 / FuntouchOS)
-- จอ NissanConnect: 800×480
-- GitHub token: ผู้ใช้จะส่งให้ตอน push (ไม่ได้เก็บไว้ใน repo)
-- AndroidManifest.xml สำคัญมาก — หลาย crash มาจาก manifest ผิด
+### Architecture
+- Kernel custom functions: `okcar_mobile.gs0` (iAP2), `okcar_usb_ethernet.gs0` (NCM), `okcar_image.gs0` (video)
+- User-space: `pccall` (IP routing), `autoconn` (connection detection)
+- Touch: `/dev/hidg0` HID gadget
+- Video/audio: over NCM network interface (virtual `usb0`)
+- MFi bypass: kernel-level, no userspace cert verification by head unit
+
+## What Still Needs Work
+
+1. **Real car testing** — needs rooted Android phone + Nissan Almera 2025 head unit
+2. **Kernel module** — OkcarOS approach needs custom kernel with okcar gadget functions; without it, need to use standard ACM/NCM gadget functions
+3. **NCM video pipeline** — currently uses screen capture → H.264 → USB bulk; should be screen capture → H.264 → NCM network → head unit
+4. **Audio over NCM** — audio should go over NCM network, not USB bulk
+5. **Touch via HID** — `/dev/hidg0` needs proper HID report descriptor for touch events
+6. **Connection detection** — `autoconn` service that detects when head unit connects
+
+## How to Continue
+
+1. Test on real rooted phone with `adb install app-release.apk`
+2. Check `/sdcard/carplay_debug.log` for protocol flow
+3. If MFi auth fails: need to study OkcarOS kernel driver more carefully
+4. If connection works but no video: fix NCM pipeline
+5. If video works but no touch: set up HID gadget properly
+
+## Git History
+```
+1a3476a Fix: targetSdk 33, minSdk 24, explicit signing, cleartextTraffic
+df30f90 Fix build errors - BUILD SUCCESSFUL (8.6MB APK)
+4e21401 Phase 3: OkcarOS-based USB Gadget + iAP2 bypass + Debug logging
+c54b158 Modern CarPlay UI + YouTube/YT Music/Google Maps integration
+```
+
+## Security Note
+⚠️ GitHub token was used during development — **revoke immediately** at https://github.com/settings/tokens
