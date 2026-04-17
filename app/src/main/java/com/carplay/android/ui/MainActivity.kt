@@ -26,23 +26,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-/**
- * Main Activity - CarPlay Dashboard
- *
- * Displays the CarPlay-like interface with:
- * - Dashboard (Home screen)
- * - Navigation (Maps)
- * - Music Player
- * - Phone/Calls
- *
- * Handles all runtime permission requests on startup.
- * Landscape-only layout optimized for car use.
- */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private var carPlayService: CarPlayService? = null
     private var serviceBound = false
+    private var serviceStarted = false
 
     // ── Service Connection ─────────────────────────────────
 
@@ -52,36 +41,28 @@ class MainActivity : AppCompatActivity() {
             carPlayService = localBinder.getService()
             serviceBound = true
             Timber.d("CarPlay service connected")
-
-            // Observe service state
             observeServiceState()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             carPlayService = null
             serviceBound = false
-            Timber.d("CarPlay service disconnected")
         }
     }
 
-    // ── Runtime Permission Launcher ────────────────────────
+    // ── Permission Launcher ────────────────────────────────
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val granted = permissions.filter { it.value }.keys
         val denied = permissions.filter { !it.value }.keys
-
-        Timber.d("Permissions granted: $granted")
         if (denied.isNotEmpty()) {
             Timber.w("Permissions denied: $denied")
             Toast.makeText(this,
                 "Some features may not work without permissions",
                 Toast.LENGTH_LONG).show()
         }
-
-        // Proceed to start service after permission result
-        startCarPlayService()
+        // Permissions handled — UI is ready
     }
 
     // ── Media Projection Launcher ──────────────────────────
@@ -90,14 +71,11 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK && result.data != null) {
-            Timber.d("Screen capture permission granted")
-
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE)
                 as MediaProjectionManager
             val projection = projectionManager.getMediaProjection(
                 result.resultCode, result.data!!
             )
-
             carPlayService?.setMediaProjection(projection)
             carPlayService?.startMedia()
             Timber.d("Screen capture started")
@@ -111,7 +89,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Full screen immersive mode
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = (
@@ -128,9 +105,7 @@ class MainActivity : AppCompatActivity() {
 
         setupNavigation()
         setupConnectionUI()
-
-        // Request permissions first, then start service
-        requestRequiredPermissions()
+        requestPermissionsIfNeeded()
     }
 
     override fun onDestroy() {
@@ -143,55 +118,26 @@ class MainActivity : AppCompatActivity() {
 
     // ── Permissions ────────────────────────────────────────
 
-    /**
-     * Build list of permissions needed at runtime
-     */
-    private fun getRequiredPermissions(): Array<String> {
+    private fun requestPermissionsIfNeeded() {
         val perms = mutableListOf(
-            // Core functionality
-            Manifest.permission.RECORD_AUDIO,        // Audio capture for CarPlay
-            Manifest.permission.ACCESS_FINE_LOCATION, // Maps
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
         )
-
-        // Android 12+ (API 31) — Bluetooth runtime permissions
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             perms.add(Manifest.permission.BLUETOOTH_CONNECT)
             perms.add(Manifest.permission.BLUETOOTH_SCAN)
         }
-
-        // Android 13+ (API 33) — Notification permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             perms.add(Manifest.permission.POST_NOTIFICATIONS)
             perms.add(Manifest.permission.READ_MEDIA_AUDIO)
         }
 
-        // Android 14+ (API 34) — Foreground service permissions are manifest-only
-        // but we need to ensure the types are declared (already done in manifest)
-
-        return perms.toTypedArray()
-    }
-
-    /**
-     * Check which permissions still need to be requested
-     */
-    private fun getMissingPermissions(): Array<String> {
-        return getRequiredPermissions().filter {
+        val missing = perms.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }.toTypedArray()
-    }
 
-    /**
-     * Request all required runtime permissions
-     */
-    private fun requestRequiredPermissions() {
-        val missing = getMissingPermissions()
-
-        if (missing.isEmpty()) {
-            Timber.d("All permissions already granted")
-            startCarPlayService()
-        } else {
-            Timber.d("Requesting permissions: ${missing.toList()}")
+        if (missing.isNotEmpty()) {
             permissionLauncher.launch(missing)
         }
     }
@@ -205,22 +151,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.navigation_dashboard -> {
-                    navController.navigate(R.id.dashboardFragment)
-                    true
-                }
-                R.id.navigation_maps -> {
-                    navController.navigate(R.id.mapsFragment)
-                    true
-                }
-                R.id.navigation_music -> {
-                    navController.navigate(R.id.musicFragment)
-                    true
-                }
-                R.id.navigation_phone -> {
-                    navController.navigate(R.id.phoneFragment)
-                    true
-                }
+                R.id.navigation_dashboard -> { navController.navigate(R.id.dashboardFragment); true }
+                R.id.navigation_maps -> { navController.navigate(R.id.mapsFragment); true }
+                R.id.navigation_music -> { navController.navigate(R.id.musicFragment); true }
+                R.id.navigation_phone -> { navController.navigate(R.id.phoneFragment); true }
                 else -> false
             }
         }
@@ -228,48 +162,49 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupConnectionUI() {
         binding.btnConnect.setOnClickListener {
+            ensureServiceStarted()
             carPlayService?.connect()
         }
-
         binding.btnDisconnect.setOnClickListener {
             carPlayService?.disconnect()
         }
-
         binding.btnScreenCapture.setOnClickListener {
             requestScreenCapture()
         }
     }
 
     /**
-     * Start and bind to CarPlay service
+     * Only start foreground service when user actually needs it (Connect button)
+     * This avoids Android 14 crash from starting foreground service at app launch
      */
-    private fun startCarPlayService() {
-        val serviceIntent = Intent(this, CarPlayService::class.java)
-        startForegroundService(serviceIntent)
-        bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+    private fun ensureServiceStarted() {
+        if (serviceStarted) return
+        serviceStarted = true
+
+        val intent = Intent(this, CarPlayService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        Timber.d("CarPlay service started + bound")
     }
 
-    /**
-     * Request screen capture permission via MediaProjection API
-     */
     private fun requestScreenCapture() {
-        // Check RECORD_AUDIO permission first (needed for audio encoder)
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "Microphone permission needed for audio", Toast.LENGTH_SHORT).show()
-            permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
             return
         }
-
+        ensureServiceStarted()
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE)
             as MediaProjectionManager
-        val intent = projectionManager.createScreenCaptureIntent()
-        screenCaptureLauncher.launch(intent)
+        screenCaptureLauncher.launch(projectionManager.createScreenCaptureIntent())
     }
 
-    /**
-     * Observe CarPlay service state changes
-     */
+    // ── Observe State ──────────────────────────────────────
+
     private fun observeServiceState() {
         lifecycleScope.launch {
             carPlayService?.connectionState?.collectLatest { state ->
@@ -282,24 +217,18 @@ class MainActivity : AppCompatActivity() {
                         CarPlayService.ConnectionState.ACTIVE -> "● Connected"
                         CarPlayService.ConnectionState.ERROR -> "✗ Error"
                     }
-
                     binding.connectionStatus.setTextColor(
                         when (state) {
-                            CarPlayService.ConnectionState.ACTIVE ->
-                                getColor(android.R.color.holo_green_light)
-                            CarPlayService.ConnectionState.ERROR ->
-                                getColor(android.R.color.holo_red_light)
-                            else ->
-                                getColor(android.R.color.white)
+                            CarPlayService.ConnectionState.ACTIVE -> getColor(android.R.color.holo_green_light)
+                            CarPlayService.ConnectionState.ERROR -> getColor(android.R.color.holo_red_light)
+                            else -> getColor(android.R.color.white)
                         }
                     )
-
                     binding.btnConnect.visibility = when (state) {
                         CarPlayService.ConnectionState.DISCONNECTED,
                         CarPlayService.ConnectionState.ERROR -> View.VISIBLE
                         else -> View.GONE
                     }
-
                     binding.btnDisconnect.visibility = when (state) {
                         CarPlayService.ConnectionState.ACTIVE,
                         CarPlayService.ConnectionState.NEGOTIATING,
@@ -309,22 +238,21 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-
         lifecycleScope.launch {
             carPlayService?.activeFeatures?.collectLatest { features ->
                 runOnUiThread {
                     binding.featureStatus.text = if (features.isEmpty()) {
                         "No features active"
                     } else {
-                        features.joinToString(" · ") { feature ->
-                            when (feature) {
+                        features.joinToString(" · ") { f ->
+                            when (f) {
                                 "screen" -> "📺 Screen"
                                 "media" -> "🎵 Media"
                                 "mic" -> "🎤 Mic"
                                 "audio" -> "🔊 Audio"
                                 "touch" -> "👆 Touch"
                                 "phone" -> "📱 Phone"
-                                else -> feature
+                                else -> f
                             }
                         }
                     }
