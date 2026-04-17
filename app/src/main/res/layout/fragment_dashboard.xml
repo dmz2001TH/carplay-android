@@ -1,311 +1,391 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- CarPlay Dashboard Layout -->
+<!-- Modern CarPlay Dashboard — App Launcher -->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dark_background"
-    android:padding="16dp">
+    android:paddingHorizontal="20dp"
+    android:paddingTop="8dp">
 
-    <!-- Time Display -->
+    <!-- Clock -->
     <TextView
         android:id="@+id/txtTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="12:00"
         android:textColor="@color/text_primary"
-        android:textSize="48sp"
+        android:textSize="56sp"
         android:fontFamily="sans-serif-thin"
+        android:letterSpacing="-0.02"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Now Playing Widget -->
-    <androidx.cardview.widget.CardView
+    <!-- Date -->
+    <TextView
+        android:id="@+id/txtDate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="2dp"
+        android:text="Monday, January 1"
+        android:textColor="@color/text_tertiary"
+        android:textSize="15sp"
+        android:fontFamily="sans-serif"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/txtTime" />
+
+    <!-- Now Playing Widget (compact) -->
+    <LinearLayout
         android:id="@+id/nowPlayingCard"
         android:layout_width="0dp"
-        android:layout_height="80dp"
+        android:layout_height="72dp"
         android:layout_marginTop="16dp"
-        app:cardBackgroundColor="@color/card_bg"
-        app:cardCornerRadius="12dp"
+        android:background="@drawable/now_playing_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="10dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/txtTime">
+        app:layout_constraintTop_toBottomOf="@id/txtDate">
 
+        <!-- Album Art Placeholder -->
+        <View
+            android:id="@+id/imgAlbumArt"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@color/surface_elevated" />
+
+        <!-- Song Info -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="12dp">
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical">
 
-            <!-- Album Art -->
-            <ImageView
-                android:id="@+id/imgAlbumArt"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:background="@color/carplay_gray"
-                android:scaleType="centerCrop" />
-
-            <LinearLayout
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/txtSongTitle"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:orientation="vertical">
+                android:text="No track playing"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium"
+                android:ellipsize="end"
+                android:maxLines="1" />
 
-                <TextView
-                    android:id="@+id/txtSongTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="No track playing"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:fontFamily="sans-serif-medium" />
+            <TextView
+                android:id="@+id/txtArtist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Connect to start"
+                android:textColor="@color/text_tertiary"
+                android:textSize="13sp"
+                android:ellipsize="end"
+                android:maxLines="1" />
 
-                <TextView
-                    android:id="@+id/txtArtist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Connect to start"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- Playback Controls -->
-            <ImageButton
-                android:id="@+id/btnPrev"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_media_previous"
-                android:tint="@color/text_primary" />
-
-            <ImageButton
-                android:id="@+id/btnPlayPause"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginHorizontal="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_media_play"
-                android:tint="@color/carplay_blue" />
-
-            <ImageButton
-                android:id="@+id/btnNext"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_media_next"
-                android:tint="@color/text_primary" />
+            <!-- Progress bar (thin) -->
+            <ProgressBar
+                android:id="@+id/progressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:layout_marginTop="6dp"
+                android:max="100"
+                android:progress="0"
+                android:progressTint="@color/carplay_blue"
+                android:progressBackgroundTint="@color/surface_elevated" />
         </LinearLayout>
-    </androidx.cardview.widget.CardView>
 
-    <!-- App Grid - CarPlay Style -->
+        <!-- Playback controls (inline) -->
+        <ImageButton
+            android:id="@+id/btnPrev"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_previous"
+            android:tint="@color/text_secondary" />
+
+        <ImageButton
+            android:id="@+id/btnPlayPause"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="2dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_play"
+            android:tint="@color/carplay_blue" />
+
+        <ImageButton
+            android:id="@+id/btnNext"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="2dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_next"
+            android:tint="@color/text_secondary" />
+    </LinearLayout>
+
+    <!-- Section Title: Apps -->
+    <TextView
+        android:id="@+id/txtAppsTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="APPS"
+        android:textColor="@color/text_tertiary"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.08"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/nowPlayingCard" />
+
+    <!-- App Grid -->
     <GridLayout
+        android:id="@+id/appGrid"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="12dp"
         android:columnCount="4"
         android:rowCount="2"
         android:useDefaultMargins="true"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/nowPlayingCard">
+        app:layout_constraintTop_toBottomOf="@id/txtAppsTitle">
 
-        <!-- Maps App -->
+        <!-- Google Maps -->
         <androidx.cardview.widget.CardView
-            android:id="@+id/cardMaps"
+            android:id="@+id/tileMaps"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_margin="8dp"
+            android:layout_margin="6dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            app:cardBackgroundColor="@color/google_maps_blue"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:src="@drawable/ic_google_maps"
+                    android:scaleType="fitCenter" />
+
+                <TextView
+                    style="@style/AppTileLabel"
+                    android:text="Maps" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- YouTube -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/tileYouTube"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="6dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            app:cardBackgroundColor="@color/youtube_red"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:src="@drawable/ic_youtube"
+                    android:scaleType="fitCenter" />
+
+                <TextView
+                    style="@style/AppTileLabel"
+                    android:text="YouTube" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- YouTube Music -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/tileYouTubeMusic"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="6dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            app:cardBackgroundColor="@color/youtube_music_orange"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:src="@drawable/ic_youtube_music"
+                    android:scaleType="fitCenter" />
+
+                <TextView
+                    style="@style/AppTileLabel"
+                    android:text="YT Music" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Phone -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/tilePhone"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="6dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             app:cardBackgroundColor="@color/carplay_green"
-            app:cardCornerRadius="16dp">
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:padding="8dp">
 
                 <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@android:drawable/ic_dialog_map"
-                    android:tint="@color/text_primary" />
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:src="@drawable/ic_phone_carplay"
+                    android:scaleType="fitCenter" />
 
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Maps"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
+                    style="@style/AppTileLabel"
+                    android:text="Phone" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Music App -->
+        <!-- Row 2: Settings, Spotify placeholder, Telegram placeholder, placeholder -->
         <androidx.cardview.widget.CardView
-            android:id="@+id/cardMusic"
+            android:id="@+id/tileSettings"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_margin="8dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            app:cardBackgroundColor="@color/carplay_orange"
-            app:cardCornerRadius="16dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@android:drawable/ic_media_play"
-                    android:tint="@color/text_primary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Music"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- Phone App -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cardPhone"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_margin="8dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            app:cardBackgroundColor="@color/carplay_blue"
-            app:cardCornerRadius="16dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@android:drawable/ic_menu_call"
-                    android:tint="@color/text_primary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Phone"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- Messages App -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cardMessages"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_margin="8dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            app:cardBackgroundColor="@color/carplay_green"
-            app:cardCornerRadius="16dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@android:drawable/ic_dialog_email"
-                    android:tint="@color/text_primary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Messages"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- Row 2 -->
-        <!-- Settings App -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cardSettings"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_margin="8dp"
+            android:layout_margin="6dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             app:cardBackgroundColor="@color/carplay_gray"
-            app:cardCornerRadius="16dp">
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:padding="8dp">
 
                 <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@android:drawable/ic_menu_preferences"
-                    android:tint="@color/text_primary" />
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:src="@drawable/ic_settings_carplay"
+                    android:scaleType="fitCenter" />
+
+                <TextView
+                    style="@style/AppTileLabel"
+                    android:text="Settings" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Spotify placeholder -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/tileSpotify"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="6dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            app:cardBackgroundColor="#1DB954"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="8dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Settings"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
+                    android:text="♫"
+                    android:textSize="32sp"
+                    android:textColor="#FFFFFF" />
+
+                <TextView
+                    style="@style/AppTileLabel"
+                    android:text="Spotify" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Placeholder for future apps -->
+        <!-- Telegram -->
         <androidx.cardview.widget.CardView
+            android:id="@+id/tileTelegram"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_margin="8dp"
+            android:layout_margin="6dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            app:cardBackgroundColor="#2C2C2E"
-            app:cardCornerRadius="16dp" />
+            app:cardBackgroundColor="#0088CC"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp">
 
-        <androidx.cardview.widget.CardView
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_margin="8dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            app:cardBackgroundColor="#2C2C2E"
-            app:cardCornerRadius="16dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="8dp">
 
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="✈"
+                    android:textSize="28sp"
+                    android:textColor="#FFFFFF" />
+
+                <TextView
+                    style="@style/AppTileLabel"
+                    android:text="Telegram" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Empty slot -->
         <androidx.cardview.widget.CardView
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_margin="8dp"
+            android:layout_margin="6dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             app:cardBackgroundColor="#2C2C2E"
-            app:cardCornerRadius="16dp" />
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp" />
     </GridLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

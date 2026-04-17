@@ -1,50 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- CarPlay Phone Layout -->
+<!-- CarPlay Phone Layout — Modernized -->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dark_background">
+    android:background="@color/dark_background"
+    android:paddingHorizontal="20dp">
 
-    <!-- Tab Bar -->
+    <!-- Tab Bar (pill style) -->
     <LinearLayout
         android:id="@+id/tabBar"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:background="@color/status_bar_bg"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/btn_source_bg"
         android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/tabKeypad"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:background="@drawable/btn_carplay_bg"
             android:gravity="center"
+            android:paddingHorizontal="20dp"
             android:text="Keypad"
-            android:textColor="@color/carplay_blue"
-            android:textSize="14sp" />
+            android:textColor="@color/text_primary"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium" />
 
         <TextView
             android:id="@+id/tabRecents"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_weight="1"
             android:gravity="center"
+            android:paddingHorizontal="20dp"
             android:text="Recents"
-            android:textColor="@color/carplay_gray"
-            android:textSize="14sp" />
+            android:textColor="@color/text_tertiary"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium" />
 
         <TextView
             android:id="@+id/tabContacts"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_weight="1"
             android:gravity="center"
+            android:paddingHorizontal="20dp"
             android:text="Contacts"
-            android:textColor="@color/carplay_gray"
-            android:textSize="14sp" />
+            android:textColor="@color/text_tertiary"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium" />
     </LinearLayout>
 
     <!-- Phone Number Display -->
@@ -52,14 +60,14 @@
         android:id="@+id/txtPhoneNumber"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="32dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="20dp"
         android:gravity="center"
         android:hint="Enter number"
         android:textColor="@color/text_primary"
         android:textColorHint="@color/carplay_gray"
-        android:textSize="32sp"
+        android:textSize="36sp"
         android:fontFamily="sans-serif-light"
+        android:letterSpacing="-0.02"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tabBar" />
@@ -69,7 +77,6 @@
         android:id="@+id/dialpadLayout"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginHorizontal="48dp"
         android:layout_marginTop="16dp"
         android:columnCount="3"
         android:rowCount="4"
@@ -86,11 +93,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
             android:text="1"
             android:textColor="@color/text_primary"
-            android:textSize="28sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
 
         <TextView
             android:id="@+id/btn2"
@@ -99,11 +107,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
-            android:text="2\nABC"
+            android:text="2"
             android:textColor="@color/text_primary"
-            android:textSize="24sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
 
         <TextView
             android:id="@+id/btn3"
@@ -112,11 +121,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
-            android:text="3\nDEF"
+            android:text="3"
             android:textColor="@color/text_primary"
-            android:textSize="24sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
 
         <!-- Row 2: 4, 5, 6 -->
         <TextView
@@ -126,11 +136,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
-            android:text="4\nGHI"
+            android:text="4"
             android:textColor="@color/text_primary"
-            android:textSize="24sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
 
         <TextView
             android:id="@+id/btn5"
@@ -139,11 +150,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
-            android:text="5\nJKL"
+            android:text="5"
             android:textColor="@color/text_primary"
-            android:textSize="24sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
 
         <TextView
             android:id="@+id/btn6"
@@ -152,11 +164,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
-            android:text="6\nMNO"
+            android:text="6"
             android:textColor="@color/text_primary"
-            android:textSize="24sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
 
         <!-- Row 3: 7, 8, 9 -->
         <TextView
@@ -166,11 +179,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
-            android:text="7\nPQRS"
+            android:text="7"
             android:textColor="@color/text_primary"
-            android:textSize="24sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
 
         <TextView
             android:id="@+id/btn8"
@@ -179,11 +193,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
-            android:text="8\nTUV"
+            android:text="8"
             android:textColor="@color/text_primary"
-            android:textSize="24sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
 
         <TextView
             android:id="@+id/btn9"
@@ -192,11 +207,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
-            android:text="9\nWXYZ"
+            android:text="9"
             android:textColor="@color/text_primary"
-            android:textSize="24sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
 
         <!-- Row 4: *, 0, # -->
         <TextView
@@ -206,11 +222,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
             android:text="*"
             android:textColor="@color/text_primary"
-            android:textSize="28sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
 
         <TextView
             android:id="@+id/btn0"
@@ -219,11 +236,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
-            android:text="0\n+"
+            android:text="0"
             android:textColor="@color/text_primary"
-            android:textSize="24sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
 
         <TextView
             android:id="@+id/btnHash"
@@ -232,11 +250,12 @@
             android:layout_margin="4dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
-            android:background="@color/card_bg"
+            android:background="@drawable/app_tile_ripple"
             android:gravity="center"
             android:text="#"
             android:textColor="@color/text_primary"
-            android:textSize="28sp" />
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light" />
     </GridLayout>
 
     <!-- Call & Backspace -->
@@ -244,7 +263,6 @@
         android:id="@+id/callButtonLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="48dp"
         android:layout_marginBottom="16dp"
         android:gravity="center"
         android:orientation="horizontal"
@@ -256,19 +274,30 @@
             android:id="@+id/btnBackspace"
             android:layout_width="56dp"
             android:layout_height="56dp"
-            android:background="@color/card_bg"
-            android:padding="12dp"
+            android:background="@drawable/app_tile_ripple"
+            android:padding="14dp"
             android:src="@android:drawable/ic_menu_close_clear_cancel"
-            android:tint="@color/carplay_gray" />
+            android:tint="@color/carplay_gray_light" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/btnCall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="32dp"
+            android:layout_marginHorizontal="40dp"
             android:src="@android:drawable/ic_menu_call"
             app:backgroundTint="@color/carplay_green"
-            app:tint="@color/text_primary" />
+            app:tint="@color/text_primary"
+            app:fabSize="normal" />
+
+        <!-- Contacts shortcut -->
+        <ImageButton
+            android:id="@+id/btnContacts"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@drawable/app_tile_ripple"
+            android:padding="14dp"
+            android:src="@android:drawable/ic_menu_myplaces"
+            android:tint="@color/carplay_gray_light" />
     </LinearLayout>
 
     <!-- Recents List (hidden by default) -->

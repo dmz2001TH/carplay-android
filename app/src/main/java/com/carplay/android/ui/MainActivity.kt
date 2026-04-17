@@ -18,7 +18,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.setupWithNavController
 import com.carplay.android.R
 import com.carplay.android.databinding.ActivityMainBinding
 import com.carplay.android.service.CarPlayService
@@ -59,10 +58,9 @@ class MainActivity : AppCompatActivity() {
         if (denied.isNotEmpty()) {
             Timber.w("Permissions denied: $denied")
             Toast.makeText(this,
-                "Some features may not work without permissions",
+                "Some features may need permissions",
                 Toast.LENGTH_LONG).show()
         }
-        // Permissions handled — UI is ready
     }
 
     // ── Media Projection Launcher ──────────────────────────
@@ -90,20 +88,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility = (
-            View.SYSTEM_UI_FLAG_FULLSCREEN or
-            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-        )
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setupNavigation()
         setupConnectionUI()
         requestPermissionsIfNeeded()
     }
@@ -144,22 +132,6 @@ class MainActivity : AppCompatActivity() {
 
     // ── Setup ──────────────────────────────────────────────
 
-    private fun setupNavigation() {
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-        val navController = navHostFragment.navController
-
-        binding.bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.navigation_dashboard -> { navController.navigate(R.id.dashboardFragment); true }
-                R.id.navigation_maps -> { navController.navigate(R.id.mapsFragment); true }
-                R.id.navigation_music -> { navController.navigate(R.id.musicFragment); true }
-                R.id.navigation_phone -> { navController.navigate(R.id.phoneFragment); true }
-                else -> false
-            }
-        }
-    }
-
     private fun setupConnectionUI() {
         binding.btnConnect.setOnClickListener {
             ensureServiceStarted()
@@ -173,10 +145,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Only start foreground service when user actually needs it (Connect button)
-     * This avoids Android 14 crash from starting foreground service at app launch
-     */
     private fun ensureServiceStarted() {
         if (serviceStarted) return
         serviceStarted = true
@@ -210,20 +178,30 @@ class MainActivity : AppCompatActivity() {
             carPlayService?.connectionState?.collectLatest { state ->
                 runOnUiThread {
                     binding.connectionStatus.text = when (state) {
-                        CarPlayService.ConnectionState.DISCONNECTED -> "Disconnected"
-                        CarPlayService.ConnectionState.CONNECTING -> "Connecting..."
-                        CarPlayService.ConnectionState.AUTHENTICATING -> "Authenticating..."
-                        CarPlayService.ConnectionState.NEGOTIATING -> "Starting sessions..."
-                        CarPlayService.ConnectionState.ACTIVE -> "● Connected"
-                        CarPlayService.ConnectionState.ERROR -> "✗ Error"
+                        CarPlayService.ConnectionState.DISCONNECTED -> getString(R.string.status_disconnected)
+                        CarPlayService.ConnectionState.CONNECTING -> getString(R.string.status_connecting)
+                        CarPlayService.ConnectionState.AUTHENTICATING -> getString(R.string.status_authenticating)
+                        CarPlayService.ConnectionState.NEGOTIATING -> getString(R.string.status_negotiating)
+                        CarPlayService.ConnectionState.ACTIVE -> getString(R.string.status_active)
+                        CarPlayService.ConnectionState.ERROR -> getString(R.string.status_error)
                     }
+
+                    // Status dot color
+                    binding.statusDot.background = when (state) {
+                        CarPlayService.ConnectionState.ACTIVE ->
+                            ContextCompat.getDrawable(this@MainActivity, R.drawable.status_dot_connected)
+                        else ->
+                            ContextCompat.getDrawable(this@MainActivity, R.drawable.status_dot)
+                    }
+
                     binding.connectionStatus.setTextColor(
                         when (state) {
-                            CarPlayService.ConnectionState.ACTIVE -> getColor(android.R.color.holo_green_light)
-                            CarPlayService.ConnectionState.ERROR -> getColor(android.R.color.holo_red_light)
-                            else -> getColor(android.R.color.white)
+                            CarPlayService.ConnectionState.ACTIVE -> getColor(R.color.carplay_green)
+                            CarPlayService.ConnectionState.ERROR -> getColor(R.color.carplay_red)
+                            else -> getColor(R.color.text_tertiary)
                         }
                     )
+
                     binding.btnConnect.visibility = when (state) {
                         CarPlayService.ConnectionState.DISCONNECTED,
                         CarPlayService.ConnectionState.ERROR -> View.VISIBLE
@@ -234,27 +212,6 @@ class MainActivity : AppCompatActivity() {
                         CarPlayService.ConnectionState.NEGOTIATING,
                         CarPlayService.ConnectionState.AUTHENTICATING -> View.VISIBLE
                         else -> View.GONE
-                    }
-                }
-            }
-        }
-        lifecycleScope.launch {
-            carPlayService?.activeFeatures?.collectLatest { features ->
-                runOnUiThread {
-                    binding.featureStatus.text = if (features.isEmpty()) {
-                        "No features active"
-                    } else {
-                        features.joinToString(" · ") { f ->
-                            when (f) {
-                                "screen" -> "📺 Screen"
-                                "media" -> "🎵 Media"
-                                "mic" -> "🎤 Mic"
-                                "audio" -> "🔊 Audio"
-                                "touch" -> "👆 Touch"
-                                "phone" -> "📱 Phone"
-                                else -> f
-                            }
-                        }
                     }
                 }
             }

@@ -50,9 +50,6 @@ dependencies {
     implementation 'androidx.navigation:navigation-fragment-ktx:2.7.6'
     implementation 'androidx.navigation:navigation-ui-ktx:2.7.6'
 
-    // OpenStreetMap (no API key needed)
-    implementation 'org.osmdroid:osmdroid-android:6.1.18'
-
     // Media
     implementation 'androidx.media3:media3-exoplayer:1.2.1'
     implementation 'androidx.media3:media3-session:1.2.1'

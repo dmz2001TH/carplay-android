@@ -13,27 +13,30 @@ import timber.log.Timber
  * 3. Session negotiation (Control, Screen, Audio, Touch, Phone)
  * 4. Active session management
  * 5. Cleanup and disconnect
+ *
+ * NOTE: MFi auth will fail on real head units without a hardware chip.
+ * This implementation handles the protocol handshake for development/testing.
  */
 class CarPlaySessionManager {
 
     companion object {
         private const val TAG = "CarPlaySession"
         private const val MAX_AUTH_RETRIES = 3
-        private const val SESSION_TIMEOUT_MS = 10_000L
+        private const val MAX_LINK_RETRIES = 5
     }
 
     // ── Session State ──────────────────────────────────────
 
     enum class SessionState {
         DISCONNECTED,
-        LINK_SYNC,           // Sending SYN, waiting for SYN-ACK
-        LINK_ESTABLISHED,    // Link layer connected
-        AUTH_CHALLENGE,      // Waiting for auth challenge
-        AUTH_RESPONSE,       // Sending certificate + auth response
-        AUTH_PENDING,        // Waiting for auth result
-        AUTHENTICATED,       // Auth success
-        SESSION_NEGOTIATING, // Opening sessions
-        ACTIVE,              // All sessions running
+        LINK_SYNC,
+        LINK_ESTABLISHED,
+        AUTH_CHALLENGE,
+        AUTH_RESPONSE,
+        AUTH_PENDING,
+        AUTHENTICATED,
+        SESSION_NEGOTIATING,
+        ACTIVE,
         ERROR
     }
 
@@ -50,134 +53,107 @@ class CarPlaySessionManager {
     // Callbacks
     var onDataSend: ((ByteArray) -> Unit)? = null
     var onSessionEvent: ((SessionEvent) -> Unit)? = null
+    var onError: ((String, Throwable?) -> Unit)? = null
 
     private var authRetries = 0
     private var linkRetryCount = 0
 
     // ── Public API ─────────────────────────────────────────
 
-    /**
-     * Start the CarPlay handshake sequence
-     */
     fun startHandshake() {
         Timber.d("Starting CarPlay handshake")
         _state.value = SessionState.LINK_SYNC
         authRetries = 0
         linkRetryCount = 0
 
-        // Step 1: Send SYN packet
         val synPacket = IAP2Packet.buildSyn()
         sendPacket(synPacket)
     }
 
-    /**
-     * Handle incoming data from head unit
-     */
     fun handleData(data: ByteArray) {
-        when (_state.value) {
-            SessionState.LINK_SYNC -> handleLinkSync(data)
-            SessionState.LINK_ESTABLISHED -> handleLinkEstablished(data)
-            SessionState.AUTH_CHALLENGE -> handleAuthChallenge(data)
-            SessionState.AUTH_PENDING -> handleAuthResult(data)
-            SessionState.AUTHENTICATED,
-            SessionState.SESSION_NEGOTIATING -> handleSessionMessage(data)
-            SessionState.ACTIVE -> handleActiveSession(data)
-            else -> Timber.w("Unexpected data in state: ${_state.value}")
+        try {
+            when (_state.value) {
+                SessionState.LINK_SYNC -> handleLinkSync(data)
+                SessionState.LINK_ESTABLISHED -> handleLinkEstablished(data)
+                SessionState.AUTH_CHALLENGE -> handleAuthChallenge(data)
+                SessionState.AUTH_PENDING -> handleAuthResult(data)
+                SessionState.AUTHENTICATED,
+                SessionState.SESSION_NEGOTIATING -> handleSessionMessage(data)
+                SessionState.ACTIVE -> handleActiveSession(data)
+                else -> Timber.v("Data received in state: ${_state.value} (${data.size}B)")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error handling data in state ${_state.value}")
+            onError?.invoke("Protocol error", e)
         }
     }
 
-    /**
-     * Open a specific session type
-     */
     fun openSession(sessionType: Byte) {
         Timber.d("Opening session: 0x${sessionType.toUByte().toString(16)}")
         val packet = IAP2Packet.buildStartSession(sessionType)
         sendPacket(packet)
     }
 
-    /**
-     * Close session and cleanup
-     */
     fun closeSession() {
         Timber.d("Closing CarPlay session")
-
-        // Send stop for all active sessions
-        activeSessions.keys.forEach { sessionType ->
-            val stopPacket = IAP2Packet.buildStopSession(sessionType)
-            sendPacket(stopPacket)
+        try {
+            activeSessions.keys.forEach { sessionType ->
+                val stopPacket = IAP2Packet.buildStopSession(sessionType)
+                sendPacket(stopPacket)
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Error sending session stop packets")
         }
-
         activeSessions.clear()
         authHandler.reset()
         _state.value = SessionState.DISCONNECTED
         onSessionEvent?.invoke(SessionEvent.Disconnected)
     }
 
-    /**
-     * Check if session is active
-     */
     fun isActive() = _state.value == SessionState.ACTIVE
-
-    /**
-     * Get active session types
-     */
     fun getActiveSessions(): Set<Byte> = activeSessions.keys.toSet()
-
-    /**
-     * Get current state
-     */
     fun getState() = _state.value
 
     // ── State Handlers ─────────────────────────────────────
 
-    /**
-     * Handle link sync phase — waiting for SYN-ACK or ACK
-     */
     private fun handleLinkSync(data: ByteArray) {
         val packet = IAP2Packet.parse(data)
         if (packet == null) {
-            Timber.w("Failed to parse link sync response")
+            Timber.v("Failed to parse link sync response (${data.size}B)")
             return
         }
 
-        Timber.d("Link sync: received packet type=0x${packet.type.toUByte().toString(16)}, " +
-                "isLink=${packet.isLinkPacket}")
+        Timber.d("Link sync: type=0x${packet.type.toUByte().toString(16)}, isLink=${packet.isLinkPacket}")
 
         when {
             packet.isLinkSynAck() || packet.isLinkAck() -> {
-                // Head unit acknowledged — send ACK back
                 Timber.d("Received SYN-ACK/ACK — sending ACK")
-                val ackPacket = IAP2Packet.buildAck()
-                sendPacket(ackPacket)
-
+                sendPacket(IAP2Packet.buildAck())
                 _state.value = SessionState.LINK_ESTABLISHED
                 linkRetryCount = 0
                 onSessionEvent?.invoke(SessionEvent.LinkEstablished)
             }
             packet.isLinkSyn() -> {
-                // Head unit also sent SYN — respond with ACK
                 Timber.d("Received SYN — sending ACK")
-                val ackPacket = IAP2Packet.buildAck()
-                sendPacket(ackPacket)
-
+                sendPacket(IAP2Packet.buildAck())
                 _state.value = SessionState.LINK_ESTABLISHED
                 onSessionEvent?.invoke(SessionEvent.LinkEstablished)
             }
             else -> {
-                Timber.w("Unexpected packet in LINK_SYNC state")
-                // Retry SYN
-                if (linkRetryCount < 3) {
+                Timber.w("Unexpected packet in LINK_SYNC")
+                if (linkRetryCount < MAX_LINK_RETRIES) {
                     linkRetryCount++
-                    val synPacket = IAP2Packet.buildSyn()
-                    sendPacket(synPacket)
+                    Timber.d("Retrying SYN ($linkRetryCount/$MAX_LINK_RETRIES)")
+                    sendPacket(IAP2Packet.buildSyn())
+                } else {
+                    Timber.e("Link sync failed after $MAX_LINK_RETRIES retries")
+                    _state.value = SessionState.ERROR
+                    onSessionEvent?.invoke(SessionEvent.Error("Link sync timeout"))
                 }
             }
         }
     }
 
-    /**
-     * Handle data after link is established — waiting for auth challenge
-     */
     private fun handleLinkEstablished(data: ByteArray) {
         val packet = IAP2Packet.parse(data) ?: return
 
@@ -188,18 +164,14 @@ class CarPlaySessionManager {
                 handleAuthChallengeInternal(packet)
             }
             packet.isDeviceInfoResponse() -> {
-                Timber.d("Received device info response — still waiting for auth challenge")
+                Timber.d("Received device info response")
             }
             else -> {
-                Timber.d("Received unexpected packet in LINK_ESTABLISHED, " +
-                        "type=0x${packet.type.toUByte().toString(16)}")
+                Timber.v("Unexpected packet in LINK_ESTABLISHED: 0x${packet.type.toUByte().toString(16)}")
             }
         }
     }
 
-    /**
-     * Handle auth challenge
-     */
     private fun handleAuthChallenge(data: ByteArray) {
         val packet = IAP2Packet.parse(data) ?: return
         handleAuthChallengeInternal(packet)
@@ -214,16 +186,15 @@ class CarPlaySessionManager {
         Timber.d("Processing auth challenge: ${packet.payload.size}B")
         _state.value = SessionState.AUTH_RESPONSE
 
-        // Step 1: Send MFi certificate
+        // Send MFi certificate
         val cert = authHandler.handleCertificateRequest()
-        val certPacket = IAP2Packet.build(
+        sendPacket(IAP2Packet.build(
             IAP2Constants.SESSION_CONTROL,
             IAP2Constants.CTRL_AUTH_CERTIFICATE.toByte(),
             cert
-        )
-        sendPacket(certPacket)
+        ))
 
-        // Step 2: Generate and send auth response
+        // Send auth response
         val response = authHandler.handleChallenge(packet.payload)
         if (response.isNotEmpty()) {
             sendPacket(response)
@@ -234,23 +205,18 @@ class CarPlaySessionManager {
         }
     }
 
-    /**
-     * Handle authentication result
-     */
     private fun handleAuthResult(data: ByteArray) {
         val packet = IAP2Packet.parse(data) ?: return
 
         when {
             packet.isAuthSuccess() -> {
-                Timber.d("✅ Authentication SUCCESS!")
+                Timber.d("Authentication SUCCESS!")
                 authHandler.onAuthSuccess(null)
                 _state.value = SessionState.AUTHENTICATED
                 onSessionEvent?.invoke(SessionEvent.Authenticated)
 
-                // Request device info then start session negotiation
-                val deviceInfoReq = IAP2Packet.buildDeviceInfoRequest()
-                sendPacket(deviceInfoReq)
-
+                // Start session negotiation
+                sendPacket(IAP2Packet.buildDeviceInfoRequest())
                 startSessionNegotiation()
             }
             packet.isAuthFailed() -> {
@@ -260,46 +226,37 @@ class CarPlaySessionManager {
                     _state.value = SessionState.LINK_SYNC
                     startHandshake()
                 } else {
-                    handleAuthError("Auth failed after $MAX_AUTH_RETRIES retries")
+                    handleAuthError("Auth failed after $MAX_AUTH_RETRIES retries (MFi chip may be required)")
                 }
             }
             else -> {
-                Timber.w("Unexpected packet in AUTH_PENDING: type=0x${packet.type.toUByte().toString(16)}")
+                Timber.v("Unexpected packet in AUTH_PENDING: 0x${packet.type.toUByte().toString(16)}")
             }
         }
     }
 
-    /**
-     * Handle session negotiation messages
-     */
     private fun handleSessionMessage(data: ByteArray) {
         val packet = IAP2Packet.parse(data) ?: return
 
         when {
             packet.isSessionAck() -> {
-                val sessionType = packet.control
-                Timber.d("Session ACK for: 0x${sessionType.toUByte().toString(16)}")
-                activeSessions[sessionType] = true
+                val sessionId = packet.control
+                Timber.d("Session ACK: 0x${sessionId.toUByte().toString(16)}")
+                activeSessions[sessionId] = true
                 checkAllSessionsReady()
             }
             packet.isSessionOpened() -> {
-                val sessionType = packet.control
-                Timber.d("Session opened: 0x${sessionType.toUByte().toString(16)}")
-                activeSessions[sessionType] = true
+                val sessionId = packet.control
+                Timber.d("Session opened: 0x${sessionId.toUByte().toString(16)}")
+                activeSessions[sessionId] = true
                 checkAllSessionsReady()
             }
-            packet.isAuthSuccess() -> {
-                Timber.d("Re-auth success (duplicate)")
-            }
             else -> {
-                Timber.d("Session message: type=0x${packet.type.toUByte().toString(16)}")
+                Timber.v("Session message: type=0x${packet.type.toUByte().toString(16)}")
             }
         }
     }
 
-    /**
-     * Handle data in active session
-     */
     private fun handleActiveSession(data: ByteArray) {
         val packet = IAP2Packet.parse(data) ?: return
 
@@ -318,9 +275,6 @@ class CarPlaySessionManager {
             packet.isAudioData() -> {
                 onSessionEvent?.invoke(SessionEvent.AudioData(packet.payload))
             }
-            packet.isSessionAck() -> {
-                Timber.d("Late session ACK")
-            }
             else -> {
                 onSessionEvent?.invoke(
                     SessionEvent.DataReceived(packet.type, packet.payload)
@@ -335,7 +289,6 @@ class CarPlaySessionManager {
         Timber.d("Starting session negotiation")
         _state.value = SessionState.SESSION_NEGOTIATING
 
-        // Open required sessions in order
         val sessions = listOf(
             IAP2Constants.SESSION_CONTROL,
             IAP2Constants.SESSION_SCREEN,
@@ -350,15 +303,11 @@ class CarPlaySessionManager {
             openSession(sessionType)
         }
 
-        // Send CarPlay device info
-        val carPlayInfo = IAP2Packet.buildCarPlayInfo()
-        sendPacket(carPlayInfo)
-
+        sendPacket(IAP2Packet.buildCarPlayInfo())
         onSessionEvent?.invoke(SessionEvent.SessionNegotiating)
     }
 
     private fun checkAllSessionsReady() {
-        // Minimum required sessions for CarPlay to work
         val requiredSessions = setOf(
             IAP2Constants.SESSION_CONTROL,
             IAP2Constants.SESSION_SCREEN,
@@ -366,12 +315,12 @@ class CarPlaySessionManager {
         )
 
         if (activeSessions.keys.containsAll(requiredSessions)) {
-            Timber.d("✅ All required sessions active! Total: ${activeSessions.size}")
+            Timber.d("All required sessions active! (${activeSessions.size} total)")
             _state.value = SessionState.ACTIVE
             onSessionEvent?.invoke(SessionEvent.SessionActive(activeSessions.keys.toList()))
         } else {
             val missing = requiredSessions - activeSessions.keys
-            Timber.d("Waiting for sessions: ${missing.map { "0x${it.toUByte().toString(16)}" }}")
+            Timber.v("Waiting for: ${missing.map { "0x${it.toUByte().toString(16)}" }}")
         }
     }
 
@@ -387,7 +336,12 @@ class CarPlaySessionManager {
     // ── Helpers ────────────────────────────────────────────
 
     private fun sendPacket(data: ByteArray) {
-        onDataSend?.invoke(data)
+        try {
+            onDataSend?.invoke(data)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to send packet")
+            onError?.invoke("Send failed", e)
+        }
     }
 
     // ── Session Events ─────────────────────────────────────

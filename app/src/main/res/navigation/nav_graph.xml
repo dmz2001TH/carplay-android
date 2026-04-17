@@ -9,7 +9,7 @@
     <fragment
         android:id="@+id/dashboardFragment"
         android:name="com.carplay.android.ui.dashboard.DashboardFragment"
-        android:label="Dashboard"
+        android:label="Home"
         tools:layout="@layout/fragment_dashboard" />
 
     <fragment

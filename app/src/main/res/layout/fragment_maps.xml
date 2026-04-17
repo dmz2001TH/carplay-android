@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- CarPlay Maps Layout - OpenStreetMap -->
+<!-- Maps Fragment — Google Maps WebView with search -->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -7,9 +7,9 @@
     android:layout_height="match_parent"
     android:background="@color/dark_background">
 
-    <!-- OpenStreetMap View (full screen) -->
-    <org.osmdroid.views.MapView
-        android:id="@+id/mapView"
+    <!-- Google Maps WebView -->
+    <WebView
+        android:id="@+id/mapWebView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -17,66 +17,93 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Search Bar Overlay -->
+    <!-- Search Bar (floating overlay) -->
     <LinearLayout
+        android:id="@+id/searchContainer"
         android:layout_width="0dp"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
         android:layout_margin="16dp"
-        android:background="@color/card_bg"
+        android:background="@drawable/now_playing_bg"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="12dp"
+        android:paddingHorizontal="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:src="@android:drawable/ic_menu_search"
-            android:tint="@color/carplay_gray" />
+            android:tint="@color/carplay_gray_light" />
 
         <EditText
             android:id="@+id/searchBar"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="10dp"
             android:background="@null"
-            android:hint="Search destination..."
+            android:hint="Search Google Maps..."
+            android:hintTextColor="@color/carplay_gray"
             android:imeOptions="actionSearch"
             android:inputType="text"
             android:textColor="@color/text_primary"
-            android:textColorHint="@color/carplay_gray"
-            android:textSize="16sp" />
+            android:textSize="15sp"
+            android:fontFamily="sans-serif" />
+
+        <!-- Clear button -->
+        <ImageButton
+            android:id="@+id/btnClearSearch"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:tint="@color/carplay_gray_light"
+            android:visibility="gone" />
     </LinearLayout>
 
-    <!-- Navigation Controls (bottom overlay) -->
+    <!-- Quick Action Buttons (bottom overlay) -->
     <LinearLayout
-        android:id="@+id/navControls"
+        android:id="@+id/quickActions"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="16dp"
         android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
+        <!-- My Location -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fabMyLocation"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="12dp"
             android:src="@android:drawable/ic_menu_mylocation"
-            app:backgroundTint="@color/card_bg"
-            app:tint="@color/carplay_blue" />
+            app:backgroundTint="@color/surface_elevated"
+            app:tint="@color/carplay_blue"
+            app:fabSize="normal" />
 
+        <!-- Open in Google Maps App -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fabNavigate"
+            android:id="@+id/fabOpenExternal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@android:drawable/ic_menu_directions"
             app:backgroundTint="@color/carplay_blue"
-            app:tint="@color/text_primary" />
+            app:tint="@color/text_primary"
+            app:fabSize="normal" />
     </LinearLayout>
+
+    <!-- Loading indicator -->
+    <ProgressBar
+        android:id="@+id/mapLoading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminateTint="@color/carplay_blue"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

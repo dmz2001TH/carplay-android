@@ -7,65 +7,38 @@
     <string name="status_connecting">Connecting…</string>
     <string name="status_authenticating">Authenticating…</string>
     <string name="status_negotiating">Starting sessions…</string>
-    <string name="status_active">● Connected</string>
-    <string name="status_error">✗ Error</string>
+    <string name="status_active">Connected</string>
+    <string name="status_error">Error</string>
 
     <!-- Buttons -->
     <string name="btn_connect">Connect</string>
     <string name="btn_disconnect">Disconnect</string>
-    <string name="btn_screen_capture">Screen</string>
+    <string name="btn_screen_capture">📺</string>
 
-    <!-- Features -->
-    <string name="feature_no_active">No features active</string>
-    <string name="feature_screen">📺 Screen</string>
-    <string name="feature_media">🎵 Media</string>
-    <string name="feature_mic">🎤 Mic</string>
-    <string name="feature_audio">🔊 Audio</string>
-    <string name="feature_touch">👆 Touch</string>
-    <string name="feature_phone">📱 Phone</string>
-
-    <!-- Dashboard -->
-    <string name="dashboard_no_track">No track playing</string>
-    <string name="dashboard_connect_prompt">Connect to start</string>
-
-    <!-- Navigation Tabs -->
+    <!-- Navigation -->
     <string name="nav_dashboard">Home</string>
     <string name="nav_maps">Maps</string>
     <string name="nav_music">Music</string>
     <string name="nav_phone">Phone</string>
 
-    <!-- Music -->
-    <string name="music_title">Music Player</string>
-    <string name="music_no_source">No media source</string>
-    <string name="music_connect_prompt">Connect to car display to play music</string>
+    <!-- Dashboard -->
+    <string name="dashboard_no_track">No track playing</string>
+    <string name="dashboard_connect_prompt">Open an app to get started</string>
 
-    <!-- Maps -->
-    <string name="maps_title">Navigation</string>
+    <!-- Music -->
+    <string name="music_title">Music</string>
+    <string name="music_no_source">No media source</string>
+    <string name="music_playing_hint">Open YouTube Music to start playing</string>
 
     <!-- Phone -->
     <string name="phone_title">Phone</string>
-    <string name="phone_dialer">Dialer</string>
-    <string name="phone_contacts">Contacts</string>
-    <string name="phone_recent">Recent</string>
+    <string name="phone_enter_number">Enter number</string>
 
     <!-- Notifications -->
     <string name="notif_channel_name">CarPlay Connection</string>
     <string name="notif_channel_desc">CarPlay head unit connection status</string>
-    <string name="notif_initializing">Initializing…</string>
-    <string name="notif_connected">CarPlay Connected ✓</string>
-    <string name="notif_streaming">CarPlay Active — Streaming</string>
-    <string name="notif_disconnected">Disconnected</string>
-    <string name="notif_reconnecting">Reconnecting…</string>
-    <string name="notif_no_device">No USB device found</string>
-
-    <!-- Errors -->
-    <string name="error_mfi_auth">MFi authentication failed — real MFi chip required</string>
-    <string name="error_usb_disconnected">USB disconnected</string>
-    <string name="error_session_failed">Session failed</string>
-    <string name="error_reconnect_failed">Reconnect failed — tap to retry</string>
 
     <!-- MFi Warning -->
-    <string name="mfi_warning_title">⚠️ MFi Limitation</string>
-    <string name="mfi_warning_message">This app uses software MFi emulation.\nReal head units (NissanConnect) will reject the connection.\nA real Apple MFi chip is required for actual use.</string>
-    <string name="mfi_warning_ok">I understand</string>
+    <string name="mfi_warning_title">MFi Authentication</string>
+    <string name="mfi_warning_message">This app emulates Apple MFi authentication.\nReal head units require a hardware MFi chip for actual connection.\n\nThe UI launcher and media features work independently.</string>
 </resources>

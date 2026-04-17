@@ -1,24 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-
     <item
         android:id="@+id/navigation_dashboard"
-        android:icon="@android:drawable/ic_menu_compass"
-        android:title="Dashboard" />
-
+        android:icon="@drawable/ic_dashboard"
+        android:title="Home" />
     <item
         android:id="@+id/navigation_maps"
-        android:icon="@android:drawable/ic_dialog_map"
+        android:icon="@drawable/ic_navigation"
         android:title="Maps" />
-
     <item
         android:id="@+id/navigation_music"
-        android:icon="@android:drawable/ic_media_play"
+        android:icon="@drawable/ic_music"
         android:title="Music" />
-
     <item
         android:id="@+id/navigation_phone"
-        android:icon="@android:drawable/ic_menu_call"
+        android:icon="@drawable/ic_phone_nav"
         android:title="Phone" />
-
 </menu>

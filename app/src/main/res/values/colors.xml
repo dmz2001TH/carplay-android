@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- CarPlay Dark Theme -->
+    <color name="dark_background">#FF000000</color>
+    <color name="surface_primary">#FF1C1C1E</color>
+    <color name="surface_secondary">#FF2C2C2E</color>
+    <color name="surface_elevated">#FF3A3A3C</color>
+
+    <!-- Accent Colors -->
+    <color name="carplay_blue">#0A84FF</color>
+    <color name="carplay_green">#30D158</color>
+    <color name="carplay_red">#FF453A</color>
+    <color name="carplay_orange">#FF9F0A</color>
+    <color name="carplay_purple">#BF5AF2</color>
+    <color name="carplay_teal">#64D2FF</color>
+    <color name="carplay_pink">#FF375F</color>
+    <color name="carplay_yellow">#FFD60A</color>
+    <color name="carplay_gray">#636366</color>
+    <color name="carplay_gray_light">#8E8E93</color>
+
+    <!-- Text -->
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FFEBEBF5</color>
+    <color name="text_tertiary">#8E8E93</color>
+
+    <!-- Card / Widget Backgrounds -->
+    <color name="card_bg">#FF1C1C1E</color>
+    <color name="card_bg_elevated">#FF2C2C2E</color>
+    <color name="status_bar_bg">#00000000</color>
+    <color name="bottom_nav_bg">#FF1C1C1E</color>
+
+    <!-- Gradient Start/End -->
+    <color name="gradient_blue_start">#0A84FF</color>
+    <color name="gradient_blue_end">#5E5CE6</color>
+    <color name="gradient_green_start">#30D158</color>
+    <color name="gradient_green_end">#32D74B</color>
+    <color name="gradient_red_start">#FF453A</color>
+    <color name="gradient_red_end">#FF6961</color>
+    <color name="gradient_orange_start">#FF9F0A</color>
+    <color name="gradient_orange_end">#FF6B00</color>
+
+    <!-- App Brand Colors -->
+    <color name="youtube_red">#FFFF0000</color>
+    <color name="youtube_music_orange">#FFFF5722</color>
+    <color name="google_maps_blue">#FF4285F4</color>
+    <color name="google_maps_green">#FF34A853</color>
+</resources>

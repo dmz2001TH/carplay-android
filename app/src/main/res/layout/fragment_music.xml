@@ -1,211 +1,367 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- CarPlay Music Player Layout -->
+<!-- Music Hub — YouTube / YouTube Music launcher + Media controls -->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dark_background"
-    android:padding="24dp">
+    android:paddingHorizontal="20dp">
 
-    <!-- Album Art (large, centered) -->
-    <androidx.cardview.widget.CardView
-        android:id="@+id/albumArtCard"
-        android:layout_width="240dp"
-        android:layout_height="240dp"
-        app:cardBackgroundColor="@color/card_bg"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="8dp"
-        app:layout_constraintBottom_toTopOf="@id/txtSongTitle"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_chainStyle="packed">
-
-        <ImageView
-            android:id="@+id/imgAlbumArt"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@color/carplay_gray"
-            android:scaleType="centerCrop"
-            android:src="@android:drawable/ic_menu_gallery" />
-    </androidx.cardview.widget.CardView>
-
-    <!-- Song Title -->
+    <!-- Header -->
     <TextView
-        android:id="@+id/txtSongTitle"
+        android:id="@+id/txtHeader"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="No track selected"
+        android:layout_marginTop="12dp"
+        android:text="Music"
         android:textColor="@color/text_primary"
-        android:textSize="22sp"
+        android:textSize="28sp"
         android:fontFamily="sans-serif-medium"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Now Playing Large Card -->
+    <LinearLayout
+        android:id="@+id/nowPlayingLarge"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/now_playing_bg"
+        android:orientation="vertical"
+        android:padding="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/albumArtCard" />
+        app:layout_constraintTop_toBottomOf="@id/txtHeader">
 
-    <!-- Artist & Album -->
+        <!-- Top row: album art + info -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Album Art -->
+            <View
+                android:id="@+id/imgAlbumArtLarge"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:background="@color/surface_elevated" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="14dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/txtNowPlayingTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="No track playing"
+                    android:textColor="@color/text_primary"
+                    android:textSize="17sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:ellipsize="end"
+                    android:maxLines="1" />
+
+                <TextView
+                    android:id="@+id/txtNowPlayingArtist"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Open YouTube Music to start"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="14sp"
+                    android:ellipsize="end"
+                    android:maxLines="1" />
+
+                <TextView
+                    android:id="@+id/txtNowPlayingSource"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="YouTube Music"
+                    android:textColor="@color/carplay_orange"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:background="@drawable/btn_source_bg" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Seek Bar -->
+        <SeekBar
+            android:id="@+id/seekBarNowPlaying"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:max="100"
+            android:progress="0"
+            android:progressTint="@color/carplay_blue"
+            android:thumbTint="@color/carplay_blue" />
+
+        <!-- Time Labels -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/txtCurrentTime"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="0:00"
+                android:textColor="@color/text_tertiary"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/txtTotalTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0:00"
+                android:textColor="@color/text_tertiary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Playback Controls -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/btnShuffle"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_rotate"
+                android:tint="@color/carplay_gray" />
+
+            <ImageButton
+                android:id="@+id/btnPrevLarge"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="16dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_media_previous"
+                android:tint="@color/text_primary" />
+
+            <ImageButton
+                android:id="@+id/btnPlayPauseLarge"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_marginHorizontal="12dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_media_play"
+                android:tint="@color/carplay_blue" />
+
+            <ImageButton
+                android:id="@+id/btnNextLarge"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_media_next"
+                android:tint="@color/text_primary" />
+
+            <ImageButton
+                android:id="@+id/btnRepeatLarge"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="16dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_rotate"
+                android:tint="@color/carplay_gray" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Source Title -->
     <TextView
-        android:id="@+id/txtArtistAlbum"
+        android:id="@+id/txtSourcesTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Select a track to play"
-        android:textColor="@color/carplay_gray"
-        android:textSize="16sp"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="20dp"
+        android:text="SOURCES"
+        android:textColor="@color/text_tertiary"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.08"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/txtSongTitle" />
+        app:layout_constraintTop_toBottomOf="@id/nowPlayingLarge" />
 
-    <!-- Progress Bar -->
-    <SeekBar
-        android:id="@+id/seekBar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="32dp"
-        android:layout_marginTop="24dp"
-        android:max="100"
-        android:progress="0"
-        android:progressTint="@color/carplay_blue"
-        android:thumbTint="@color/carplay_blue"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/txtArtistAlbum" />
-
-    <!-- Time Labels -->
+    <!-- Source Buttons Grid -->
     <LinearLayout
+        android:id="@+id/sourceGrid"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="32dp"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="12dp"
         android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/seekBar">
+        app:layout_constraintTop_toBottomOf="@id/txtSourcesTitle">
 
-        <TextView
-            android:id="@+id/txtCurrentTime"
+        <!-- YouTube -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/btnOpenYouTube"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="72dp"
             android:layout_weight="1"
-            android:text="0:00"
-            android:textColor="@color/carplay_gray"
-            android:textSize="12sp" />
+            android:layout_marginEnd="6dp"
+            app:cardBackgroundColor="@color/youtube_red"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp">
 
-        <TextView
-            android:id="@+id/txtTotalTime"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0:00"
-            android:textColor="@color/carplay_gray"
-            android:textSize="12sp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="▶"
+                    android:textSize="24sp"
+                    android:textColor="#FFFFFF" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="YouTube"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- YouTube Music -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/btnOpenYTMusic"
+            android:layout_width="0dp"
+            android:layout_height="72dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="6dp"
+            app:cardBackgroundColor="@color/youtube_music_orange"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="♫"
+                    android:textSize="24sp"
+                    android:textColor="#FFFFFF" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="YT Music"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Spotify -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/btnOpenSpotify"
+            android:layout_width="0dp"
+            android:layout_height="72dp"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            app:cardBackgroundColor="#1DB954"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="♪"
+                    android:textSize="24sp"
+                    android:textColor="#FFFFFF" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Spotify"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
     </LinearLayout>
 
-    <!-- Playback Controls -->
+    <!-- Volume Control -->
     <LinearLayout
-        android:id="@+id/controlsLayout"
-        android:layout_width="wrap_content"
+        android:id="@+id/volumeControl"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="20dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/seekBar">
+        app:layout_constraintTop_toBottomOf="@id/sourceGrid">
 
-        <!-- Shuffle -->
-        <ImageButton
-            android:id="@+id/btnShuffle"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_rotate"
-            android:tint="@color/carplay_gray" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔈"
+            android:textSize="18sp" />
 
-        <!-- Previous -->
-        <ImageButton
-            android:id="@+id/btnPrev"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:layout_marginStart="24dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_media_previous"
-            android:tint="@color/text_primary" />
+        <SeekBar
+            android:id="@+id/volumeSeekBar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="12dp"
+            android:max="100"
+            android:progress="70"
+            android:progressTint="@color/carplay_gray_light"
+            android:thumbTint="@color/carplay_gray_light" />
 
-        <!-- Play/Pause (larger, accent color) -->
-        <ImageButton
-            android:id="@+id/btnPlayPause"
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:layout_marginHorizontal="16dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_media_play"
-            android:tint="@color/carplay_blue" />
-
-        <!-- Next -->
-        <ImageButton
-            android:id="@+id/btnNext"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_media_next"
-            android:tint="@color/text_primary" />
-
-        <!-- Repeat -->
-        <ImageButton
-            android:id="@+id/btnRepeat"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="24dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_rotate"
-            android:tint="@color/carplay_gray" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔊"
+            android:textSize="18sp" />
     </LinearLayout>
 
-    <!-- Source Selector -->
-    <LinearLayout
+    <!-- Connection Reminder (shown when no media session active) -->
+    <TextView
+        android:id="@+id/txtNoMedia"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="32dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginTop="20dp"
         android:gravity="center"
-        android:orientation="horizontal"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:text="Open YouTube, YouTube Music or Spotify to play music through your car"
+        android:textColor="@color/text_tertiary"
+        android:textSize="14sp"
+        android:lineSpacingExtra="4dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/btn_source_bg"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp"
-            android:text="🎵 Local"
-            android:textColor="@color/carplay_blue"
-            android:textSize="14sp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:background="@drawable/btn_source_bg"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp"
-            android:text="🟢 Spotify"
-            android:textColor="@color/carplay_gray"
-            android:textSize="14sp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:background="@drawable/btn_source_bg"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp"
-            android:text="📻 Radio"
-            android:textColor="@color/carplay_gray"
-            android:textSize="14sp" />
-    </LinearLayout>
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/volumeControl"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

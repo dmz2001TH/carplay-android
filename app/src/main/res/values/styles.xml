@@ -1,17 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="dark_background">#FF1C1C1E</color>
-    <color name="status_bar_bg">#FF2C2C2E</color>
-    <color name="bottom_nav_bg">#FF2C2C2E</color>
-    <color name="carplay_blue">#007AFF</color>
-    <color name="carplay_green">#34C759</color>
-    <color name="carplay_red">#FF3B30</color>
-    <color name="carplay_orange">#FF9500</color>
-    <color name="carplay_gray">#8E8E93</color>
-    <color name="card_bg">#FF3A3A3C</color>
-    <color name="text_primary">#FFFFFFFF</color>
-    <color name="text_secondary">#FFEBEBF5</color>
-
     <style name="Theme.CarPlay" parent="Theme.MaterialComponents.NoActionBar">
         <item name="colorPrimary">@color/carplay_blue</item>
         <item name="colorPrimaryDark">@color/dark_background</item>
@@ -19,5 +7,35 @@
         <item name="android:windowBackground">@color/dark_background</item>
         <item name="android:statusBarColor">@color/dark_background</item>
         <item name="android:navigationBarColor">@color/bottom_nav_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- App Tile Style -->
+    <style name="AppTileIcon">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:padding">8dp</item>
+    </style>
+
+    <style name="AppTileLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:layout_marginTop">6dp</item>
+    </style>
+
+    <!-- CarPlay Button -->
+    <style name="CarPlayButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">36dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:background">@drawable/btn_carplay_bg</item>
     </style>
 </resources>
